@@ -1,0 +1,35 @@
+
+{
+  "experiment_name": "example_experiment",
+  "description": "Run sdr_beamformer with 2 users and 5 antennas, gamma_k = 0.1 for all users",
+  "configs": 
+    {
+      "name": "sdr_beamformer_5x2_gamma0.1",
+      "algorithm": "sdr_beamformer",
+      "num_randomizations": 20,
+      "num_antennas": 5,
+      "num_users": 2,
+      "gamma_k": [1],
+      "noise_power": [0.1],
+      "W_init": [
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0]
+      ],
+      "power_constraint": {
+        "type": "total",
+        "value": 1.0
+      },
+      "solver_options": {
+        "max_iterations": 1000,
+        "tolerance": 1e-6,
+        "sdp_solver": "cvx" 
+      },
+      "random_seed": 42,
+      "notes": "gamma_k applies to users in order; W_init dimensions are antennas x users"
+    }
+  
+}
+

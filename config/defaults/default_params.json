@@ -1,0 +1,36 @@
+{
+  "description": "Default parameters for multicast beamforming experiments",
+  
+  "system": {
+    "num_antennas": 8,
+    "num_users": 4,
+    "num_streams": 1,
+    "noise_power": 1.0,
+    "power_budget": 1.0
+  },
+  
+  "channel": {
+    "model": "iid_rayleigh",
+    "rician_factor": 0,
+    "correlation": 0
+  },
+  
+  "algorithm": {
+    "max_iterations": 1000,
+    "tolerance": 1e-6,
+    "step_size": 0.1,
+    "regularization": 1e-8
+  },
+  
+  "experiment": {
+    "num_realizations": 100,
+    "random_seed": 42,
+    "save_intermediate": false
+  },
+  
+  "output": {
+    "save_beamformers": true,
+    "save_metrics": true,
+    "verbose": true
+  }
+}
