@@ -40,3 +40,5 @@ Design of Single-Group Multicasting-Beamformers.pdf
 Robust Adaptive Beamforming for General-Rank Signal Models with Positive Semi-Definite Constraint.pdf
 Robust Adaptive Beamforming Using Worst-Case Performance Optimization.pdf
 Transmit_beamforming_for_physical-layer_multicasting.pdf
+
+.gitignore
