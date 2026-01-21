@@ -41,7 +41,7 @@ results/
 results/*
 results/raw/
 results/processed/
-results/raw
+results/raw/fig4
 
 #Papers 
 Design of Single-Group Multicasting-Beamformers.pdf
