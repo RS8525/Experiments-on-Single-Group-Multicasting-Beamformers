@@ -17,6 +17,7 @@ Implementation and comparison of multicast beamforming algorithms from the paper
 |-- src/                      # Source code
 |   |-- algorithms/           # Algorithm implementations (no plotting)
 |   |   |-- baselines/        # Baseline algorithms
+|   |   |-- utils/            # Algortithm subfunctions
 |   |-- channels/             # Channel generation functions
 |   |-- utils/                # Utility functions
 |   |   |-- config/           # Config loading

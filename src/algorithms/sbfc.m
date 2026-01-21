@@ -5,7 +5,7 @@ function [w, h_orth] = sbfc(h, c, gamma, N, rc_c2)
     %   [w, h_orth] = sbfc(h, c, gamma, N, rc_c2)
     %
     % Input:
-    %   h       - Channel matrix (M x K) where M is antenna count, K is users
+    %   H      - [num_antennas x num_users] channel matrix
     %   c       - Cost vector (K x 1) for user selection
     %   gamma   - SNR threshold for exit condition
     %   N       - Maximum iterations
@@ -16,8 +16,8 @@ function [w, h_orth] = sbfc(h, c, gamma, N, rc_c2)
     %   h_orth  - Orthogonalized channels (M x K)
     
     % Step 1: Save original channels
-    h_orig = h;
-    [M, K] = size(h);
+    h_orig = H;
+    [num_antennas, num_users] = size(H);
     h_orth = h_orig;
     
     % Step 2: Select weakest user (most violated constraint)
@@ -27,12 +27,12 @@ function [w, h_orth] = sbfc(h, c, gamma, N, rc_c2)
     w = (h_orth(:, l1) / norm(h_orth(:, l1), 2));
     
     % Step 4: Initialize active user set
-    U = setdiff(1:K, l1);
+    U = setdiff(1:num_users, l1);
     
     % Main iteration loop
     for n = 2:N
         % Step 6: Find most violated constraint
-        snr_k = zeros(1, K);
+        snr_k = zeros(1, num_users);
         for k = U
             snr_k(k) = abs(w' * h_orth(:, k))^2;
         end

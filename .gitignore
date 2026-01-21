@@ -35,6 +35,11 @@ desktop.ini
 # Documentation
 MASTER_HINTS.md
 
+#Results
+results/
+results/raw/
+results/processed/
+
 #Papers 
 Design of Single-Group Multicasting-Beamformers.pdf
 Robust Adaptive Beamforming for General-Rank Signal Models with Positive Semi-Definite Constraint.pdf
