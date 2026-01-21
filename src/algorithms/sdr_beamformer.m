@@ -8,7 +8,7 @@ function [W, metrics] = sdr_beamformer(H, config)
 %   H      - [num_antennas x num_users] channel matrix
 %            H(:,k) is the channel vector from transmitter to user k
 %   config - struct with fields:
-%            .gamma_k            : [num_users x 1] QoS requirements (optional, default = ones)
+%            .gamma            : scalar or [num_users x 1] QoS requirements (optional, default = ones)
 %            .noise_power        : scalar or [num_users x 1] noise power (optional, default = ones)
 %            .num_randomizations : number of Gaussian randomizations (optional, default = 200)
 %            .cvx_quiet          : suppress CVX output (optional, default = true)
@@ -34,7 +34,7 @@ function [W, metrics] = sdr_beamformer(H, config)
 %   CVX toolbox must be installed
 %
 % Method:
-%   1. Solve SDR: minimize trace(X) s.t. trace(Q_k*X) >= gamma_k*noise_k, X >= 0
+%   1. Solve SDR: minimize trace(X) s.t. trace(Q_k*X) >= gamma*noise_k, X >= 0
 %   2. Apply Gaussian randomization to extract rank-1 beamformer
 %   3. Scale randomized solutions to satisfy QoS constraints with minimum power
 %
@@ -58,15 +58,15 @@ if isfield(config, 'seed')
 end
 
 % Extract parameters with defaults
-if isfield(config, 'gamma_k')
-    if isscalar(config.gamma_k)
-        gamma_k = config.gamma_k * ones(num_users, 1);  % Broadcast scalar to vector
+if isfield(config, 'gamma')
+    if isscalar(config.gamma)
+        gamma = config.gamma * ones(num_users, 1);  % Broadcast scalar to vector
     else
-        gamma_k = config.gamma_k;
-        assert(length(gamma_k) == num_users, 'gamma_k must be [num_users x 1] vector');
+        gamma = config.gamma;
+        assert(length(gamma) == num_users, 'gamma must be [num_users x 1] vector');
     end
 else
-    gamma_k = ones(num_users, 1);  % Default QoS requirement
+    gamma = ones(num_users, 1);  % Default QoS requirement
 end
 
 if isfield(config, 'noise_power')
@@ -102,8 +102,8 @@ for k = 1:num_users
     Q{k} = h_k * h_k';  % [num_antennas x num_antennas]
 end
 
-% Right-hand side of QoS constraints: noise_k * gamma_k
-rhs = noise_power .* gamma_k;  % [num_users x 1]
+% Right-hand side of QoS constraints: noise_k * gamma
+rhs = noise_power .* gamma;  % [num_users x 1]
 
 %% Solve SDR via CVX using SeDuMi
 cvx_solver sedumi;
@@ -229,9 +229,9 @@ end
 min_snr = min(snr);
 rate = sum(log2(1 + snr));
 
-% Check feasibility: all SNR(k) >= gamma_k within tolerance
+% Check feasibility: all SNR(k) >= gamma within tolerance
 tolerance = 1e-6;
-feasible = all(snr >= gamma_k * (1 - tolerance));
+feasible = all(snr >= gamma * (1 - tolerance));
 
 % Update metrics
 metrics.final_power = best_power;

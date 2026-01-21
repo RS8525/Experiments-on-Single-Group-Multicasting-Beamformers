@@ -54,10 +54,13 @@ num_k = numel(k_list);
 
 algo_names = cell(1, num_algs);
 algo_fns = cell(1, num_algs);
+method_fields = cell(1, num_algs);
 for alg_idx = 1:num_algs
     algo_names{alg_idx} = algorithms(alg_idx).name;
     algo_fns{alg_idx} = resolve_algorithm(algorithms(alg_idx).name);
+    method_fields{alg_idx} = matlab.lang.makeValidName(algo_names{alg_idx});
 end
+has_sdr = any(strcmpi(algo_names, 'sdr_beamformer'));
 
 results = struct();
 results.meta = struct();
@@ -85,21 +88,31 @@ for s = 1:num_scenarios
     results.raw.(scenario_field).num_antennas = num_antennas;
     results.raw.(scenario_field).k_list = k_list;
     results.raw.(scenario_field).algorithms = algo_names;
-    results.raw.(scenario_field).power = cell(num_algs, num_k);
-    results.raw.(scenario_field).min_snr = cell(num_algs, num_k);
-    results.raw.(scenario_field).snr = cell(num_algs, num_k);
-    results.raw.(scenario_field).feasible = cell(num_algs, num_k);
-    results.raw.(scenario_field).solve_time = cell(num_algs, num_k);
-    results.raw.(scenario_field).status = cell(num_algs, num_k);
+    results.raw.(scenario_field).methods = struct();
+    for alg_idx = 1:num_algs
+        method_field = method_fields{alg_idx};
+        results.raw.(scenario_field).methods.(method_field) = struct();
+        results.raw.(scenario_field).methods.(method_field).power = cell(1, num_k);
+        results.raw.(scenario_field).methods.(method_field).min_snr = cell(1, num_k);
+        results.raw.(scenario_field).methods.(method_field).snr = cell(1, num_k);
+        results.raw.(scenario_field).methods.(method_field).feasible = cell(1, num_k);
+        results.raw.(scenario_field).methods.(method_field).solve_time = cell(1, num_k);
+        results.raw.(scenario_field).methods.(method_field).status = cell(1, num_k);
+        results.raw.(scenario_field).methods.(method_field).cvx_optval = cell(1, num_k);
+    end
+    if has_sdr
+        results.raw.(scenario_field).methods.BOUND = struct();
+        results.raw.(scenario_field).methods.BOUND.cvx_optval = cell(1, num_k);
+    end
 
     for k_idx = 1:num_k
         num_users = k_list(k_idx);
 
         if isscalar(gamma_linear)
-            gamma_k = gamma_linear * ones(num_users, 1);
+            gamma = gamma_linear * ones(num_users, 1);
         else
             assert(numel(gamma_linear) == num_users, 'gamma_linear must be scalar or length K');
-            gamma_k = gamma_linear(:);
+            gamma = gamma_linear(:);
         end
 
         if isscalar(noise_power)
@@ -110,12 +123,17 @@ for s = 1:num_scenarios
         end
 
         for alg_idx = 1:num_algs
-            results.raw.(scenario_field).power{alg_idx, k_idx} = nan(1, num_trials);
-            results.raw.(scenario_field).min_snr{alg_idx, k_idx} = nan(1, num_trials);
-            results.raw.(scenario_field).snr{alg_idx, k_idx} = nan(num_users, num_trials);
-            results.raw.(scenario_field).feasible{alg_idx, k_idx} = false(1, num_trials);
-            results.raw.(scenario_field).solve_time{alg_idx, k_idx} = nan(1, num_trials);
-            results.raw.(scenario_field).status{alg_idx, k_idx} = cell(1, num_trials);
+            method_field = method_fields{alg_idx};
+            results.raw.(scenario_field).methods.(method_field).power{k_idx} = nan(1, num_trials);
+            results.raw.(scenario_field).methods.(method_field).min_snr{k_idx} = nan(1, num_trials);
+            results.raw.(scenario_field).methods.(method_field).snr{k_idx} = nan(num_users, num_trials);
+            results.raw.(scenario_field).methods.(method_field).feasible{k_idx} = false(1, num_trials);
+            results.raw.(scenario_field).methods.(method_field).solve_time{k_idx} = nan(1, num_trials);
+            results.raw.(scenario_field).methods.(method_field).status{k_idx} = cell(1, num_trials);
+            results.raw.(scenario_field).methods.(method_field).cvx_optval{k_idx} = nan(1, num_trials);
+        end
+        if has_sdr
+            results.raw.(scenario_field).methods.BOUND.cvx_optval{k_idx} = nan(1, num_trials);
         end
 
         logf('Scenario %s (N=%d), K=%d', scenario_name, num_antennas, num_users);
@@ -127,6 +145,7 @@ for s = 1:num_scenarios
             end
 
             for alg_idx = 1:num_algs
+                method_field = method_fields{alg_idx};
                 algo_params = struct();
                 if isfield(algorithms(alg_idx), 'params') && ~isempty(algorithms(alg_idx).params)
                     algo_params = algorithms(alg_idx).params;
@@ -136,7 +155,7 @@ for s = 1:num_scenarios
                     algo_params = rmfield(algo_params, 'seed');
                 end
 
-                algo_params.gamma_k = gamma_k;
+                algo_params.gamma = gamma;
                 algo_params.noise_power = noise_k;
 
                 try
@@ -157,30 +176,36 @@ for s = 1:num_scenarios
 
                     min_snr = min(snr);
 
-                    results.raw.(scenario_field).power{alg_idx, k_idx}(trial) = power;
-                    results.raw.(scenario_field).min_snr{alg_idx, k_idx}(trial) = min_snr;
-                    results.raw.(scenario_field).snr{alg_idx, k_idx}(:, trial) = snr;
+                    results.raw.(scenario_field).methods.(method_field).power{k_idx}(trial) = power;
+                    results.raw.(scenario_field).methods.(method_field).min_snr{k_idx}(trial) = min_snr;
+                    results.raw.(scenario_field).methods.(method_field).snr{k_idx}(:, trial) = snr;
 
                     if isfield(metrics, 'feasible')
                         feasible = metrics.feasible;
                     else
                         tol = 1e-6;
-                        feasible = all(snr >= gamma_k * (1 - tol));
+                        feasible = all(snr >= gamma * (1 - tol));
                     end
-                    results.raw.(scenario_field).feasible{alg_idx, k_idx}(trial) = feasible;
+                    results.raw.(scenario_field).methods.(method_field).feasible{k_idx}(trial) = feasible;
 
                     if isfield(metrics, 'solve_time')
-                        results.raw.(scenario_field).solve_time{alg_idx, k_idx}(trial) = metrics.solve_time;
+                        results.raw.(scenario_field).methods.(method_field).solve_time{k_idx}(trial) = metrics.solve_time;
                     end
 
                     if isfield(metrics, 'status_message')
-                        results.raw.(scenario_field).status{alg_idx, k_idx}{trial} = metrics.status_message;
+                        results.raw.(scenario_field).methods.(method_field).status{k_idx}{trial} = metrics.status_message;
                     else
-                        results.raw.(scenario_field).status{alg_idx, k_idx}{trial} = '';
+                        results.raw.(scenario_field).methods.(method_field).status{k_idx}{trial} = '';
+                    end
+                    if isfield(metrics, 'cvx_optval')
+                        results.raw.(scenario_field).methods.(method_field).cvx_optval{k_idx}(trial) = metrics.cvx_optval;
+                        if has_sdr && strcmpi(algo_names{alg_idx}, 'sdr_beamformer')
+                            results.raw.(scenario_field).methods.BOUND.cvx_optval{k_idx}(trial) = metrics.cvx_optval;
+                        end
                     end
 
                 catch ME
-                    results.raw.(scenario_field).status{alg_idx, k_idx}{trial} = ME.message;
+                    results.raw.(scenario_field).methods.(method_field).status{k_idx}{trial} = ME.message;
                     logf('Algorithm %s failed (scenario=%s, K=%d, trial=%d): %s', ...
                         algo_names{alg_idx}, scenario_name, num_users, trial, ME.message);
                 end

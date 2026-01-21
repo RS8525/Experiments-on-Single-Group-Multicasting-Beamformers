@@ -1,0 +1,27 @@
+{
+  "experiment_name": "fig4",
+  "description": "Fig. 4 power vs K (N=6) with shared trials for Fig. 5 (N=4)",
+  "seed": 42,
+  "num_trials": 200,
+  "k_list": [2, 4, 6, 8, 10, 12],
+  "scenarios": [
+    { "name": "fig4_n6", "num_antennas": 6 },
+    { "name": "fig5_n4", "num_antennas": 4 }
+  ],
+  "num_streams": 1,
+  "noise_power": 1.0,
+  "gamma_db": 0,
+  "channel": {
+    "type": "iid_rayleigh",
+    "normalize": false
+  },
+  "algorithms": [
+    {
+      "name": "sdr_beamformer",
+      "params": {
+        "num_randomizations": 200,
+        "cvx_quiet": true
+      }
+    }
+  ]
+}

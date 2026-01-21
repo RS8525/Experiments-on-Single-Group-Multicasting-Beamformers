@@ -1,94 +1,135 @@
 function [W, metrics] = ff_c2(H, config)
-% FF_C2 Fixed-point algorithm for multicast beamforming (Criterion 2)
+% FF_C2 Full Featured Combine-2 algorithm for multicast beamforming
 %
-% Implements the fixed-point iteration algorithm from the paper
-% "Design of Single-Group Multicasting-Beamformers"
+% Implements the FF-C2 algorithm that selects two users out of K, computes
+% the lowest norm precoding vector meeting their SNR constraints, scales it
+% to satisfy all users' constraints, and chooses the solution with minimum
+% transmit power.
 %
 % Inputs:
-%   H      - [M x K] channel matrix (M antennas, K users)
-%            OR [M x K x N] for multiple streams
+%   H      - [num_antennas x num_users] channel matrix
+%            H(:,k) is the channel vector from transmitter to user k
 %   config - struct with fields:
-%            .power_budget   : total transmit power constraint
-%            .max_iterations : maximum number of iterations
-%            .tolerance      : convergence tolerance
-%            .noise_power    : (optional) noise power, default = 1.0
+%            .gamma     : scalar or [num_users x 1] QoS/SNR targets (required)
+%            .noise_power : scalar or [num_users x 1] noise power (optional, default = 1.0)
 %
 % Outputs:
-%   W       - [M x N] beamforming matrix (N streams)
+%   W       - [num_antennas x 1] beamforming vector
 %   metrics - struct with fields:
-%             .iterations  : number of iterations until convergence
-%             .converged   : true if converged, false otherwise
-%             .final_power : final transmit power
-%             .snr         : [K x 1] SNR per user
-%             .rate        : total sum rate
+%             .num_pairs       : number of user pairs considered (K*(K-1)/2)
+%             .best_pair       : indices [i, j] of the best user pair
+%             .final_power     : final transmit power
+%             .snr             : [num_users x 1] SNR per user
+%             .min_snr         : minimum SNR across users
+%             .rate            : sum rate in bits/s/Hz
+%             .feasible        : true if QoS constraints satisfied
+%             .status_message  : descriptive status string
 %
 % Reference:
 %   Paper: "Design of Single-Group Multicasting-Beamformers"
-%   Algorithm: Fixed-point (Criterion 2)
+%   Algorithm: Full Featured Combine-2 (FF-C2)
+%   Complexity: K^2(N+10) + KN + O(1) FLOPs
 
-% TODO: Implement FF-C2 algorithm
-% This is a placeholder that needs to be replaced with the actual algorithm
+%% Configuration and defaults
+[num_antennas, num_users] = size(H);
 
-% Extract dimensions
-if ndims(H) == 2
-    [M, K] = size(H);
-    N = 1;
-    H = reshape(H, M, K, 1);
-else
-    [M, K, N] = size(H);
+% Extract QoS requirements
+if ~isfield(config, 'gamma')
+    error('ff_c2:missingParameter', 'config.gamma is required');
 end
 
-% Extract parameters
-P_max = config.power_budget;
-max_iter = config.max_iterations;
-tol = config.tolerance;
+if isscalar(config.gamma)
+    gamma = config.gamma * ones(num_users, 1);
+else
+    gamma = config.gamma(:);
+    assert(length(gamma) == num_users, 'gamma must be scalar or [num_users x 1] vector');
+end
 
+% Extract noise power
 if isfield(config, 'noise_power')
-    sigma2 = config.noise_power;
+    if isscalar(config.noise_power)
+        sigma_k_squared = config.noise_power * ones(num_users, 1);
+    else
+        sigma_k_squared = config.noise_power(:);
+        assert(length(sigma_k_squared) == num_users, 'noise_power must be scalar or [num_users x 1] vector');
+    end
 else
-    sigma2 = 1.0;
+    sigma_k_squared = ones(num_users, 1);
 end
 
-% Initialize beamformer (Maximum Ratio Transmission)
-W = zeros(M, N);
-for n = 1:N
-    h_avg = mean(H(:, :, n), 2);
-    W(:, n) = sqrt(P_max / N) * h_avg / norm(h_avg);
-end
+%% Main algorithm: Loop over all K(K-1)/2 user pairs
+num_pairs = num_users * (num_users - 1) / 2;
+best_power = inf;
+best_w = [];
+best_pair = [0, 0];
 
-% Fixed-point iteration
-converged = false;
-for iter = 1:max_iter
-    W_old = W;
-    
-    % TODO: Implement fixed-point update
-    % For now, just a placeholder
-    
-    % Check convergence
-    delta = norm(W - W_old, 'fro') / norm(W_old, 'fro');
-    if delta < tol
-        converged = true;
-        break;
+pair_idx = 0;
+for i = 1:(num_users-1)
+    for j = (i+1):num_users
+        pair_idx = pair_idx + 1;
+        
+        % Extract channel vectors for users i and j
+        h_i = H(:, i);
+        h_j = H(:, j);
+        
+        % Compute the lowest norm precoding vector w^{i,j} for users i and j
+        w_ij = compute_lowest_norm_precoder(h_i, h_j, gamma(i), gamma(j), ...
+                                           sigma_k_squared(i), sigma_k_squared(j));
+        
+        % Compute scaling factor alpha^{i,j} to satisfy ALL SNR constraints
+        alpha_ij = compute_scaling_factor(w_ij, H, gamma, sigma_k_squared);
+        
+        % Scale the precoder if necessary
+        if alpha_ij > 1
+            w_scaled = alpha_ij * w_ij;
+        else
+            w_scaled = w_ij;
+        end
+        
+        % Compute transmit power for this candidate
+        power_ij = norm(w_scaled)^2;
+        
+        % Keep track of the best (minimum power) solution
+        if power_ij < best_power
+            best_power = power_ij;
+            best_w = w_scaled;
+            best_pair = [i, j];
+        end
     end
 end
 
-% Compute final metrics
-final_power = norm(W, 'fro')^2;
-snr = zeros(K, 1);
-for k = 1:K
-    signal_power = 0;
-    for n = 1:N
-        signal_power = signal_power + abs(H(:, k, n)' * W(:, n))^2;
-    end
-    snr(k) = signal_power / sigma2;
-end
+% Select the final beamforming vector
+W = best_w;
+
+%% Compute final metrics
+% Received power at each user
+recv_power = abs(H' * W).^2;  % [num_users x 1]
+
+% SNR for each user
+snr = recv_power ./ sigma_k_squared;
+
+% Minimum SNR across users
+min_snr = min(snr);
+
+% Sum rate in bits/s/Hz
 rate = sum(log2(1 + snr));
 
-% Prepare output
-metrics.iterations = iter;
-metrics.converged = converged;
-metrics.final_power = final_power;
+% Check feasibility (with small tolerance)
+feasible = all(snr >= gamma * (1 - 1e-8));
+
+% Populate metrics structure
+metrics.num_pairs = num_pairs;
+metrics.best_pair = best_pair;
+metrics.final_power = best_power;
 metrics.snr = snr;
+metrics.min_snr = min_snr;
 metrics.rate = rate;
+metrics.feasible = feasible;
+
+if feasible
+    metrics.status_message = sprintf('Optimal solution found (pair: %d, %d)', best_pair(1), best_pair(2));
+else
+    metrics.status_message = sprintf('Solution found but infeasible (pair: %d, %d)', best_pair(1), best_pair(2));
+end
 
 end
