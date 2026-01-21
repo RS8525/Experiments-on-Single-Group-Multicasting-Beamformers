@@ -1,15 +1,15 @@
-function H = generate_channel_iid_rayleigh(M, K, N, varargin)
+function H = generate_channel_iid_rayleigh(num_antennas, num_users, num_streams, varargin)
 % GENERATE_CHANNEL_IID_RAYLEIGH Generate IID Rayleigh fading channel
 %
 % Inputs:
-%   M - Number of transmit antennas
-%   K - Number of users
-%   N - Number of streams (optional, default = 1)
+%   num_antennas - Number of transmit antennas
+%   num_users    - Number of users
+%   num_streams  - Number of streams (optional, default = 1)
 %   varargin - Optional name-value pairs:
 %              'Normalize', true/false - Normalize channel (default: false)
 %
 % Outputs:
-%   H - [M x K x N] channel matrix
+%   H - [num_antennas x num_users x num_streams] channel matrix
 %       H(:, k, n) is the channel vector from transmitter to user k for stream n
 %
 % Example:
@@ -19,7 +19,7 @@ function H = generate_channel_iid_rayleigh(M, K, N, varargin)
 
 % Parse inputs
 if nargin < 3
-    N = 1;
+    num_streams = 1;
 end
 
 p = inputParser;
@@ -29,12 +29,12 @@ normalize = p.Results.Normalize;
 
 % Generate complex Gaussian channel (Rayleigh fading)
 % Each element ~ CN(0, 1)
-H = (randn(M, K, N) + 1j * randn(M, K, N)) / sqrt(2);
+H = (randn(num_antennas, num_users, num_streams) + 1j * randn(num_antennas, num_users, num_streams)) / sqrt(2);
 
 % Optional normalization
 if normalize
-    for n = 1:N
-        for k = 1:K
+    for n = 1:num_streams
+        for k = 1:num_users
             H(:, k, n) = H(:, k, n) / norm(H(:, k, n));
         end
     end

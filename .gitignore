@@ -37,8 +37,11 @@ MASTER_HINTS.md
 
 #Results
 results/
+**/results/
+results/*
 results/raw/
 results/processed/
+results/raw
 
 #Papers 
 Design of Single-Group Multicasting-Beamformers.pdf
