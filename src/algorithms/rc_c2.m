@@ -9,8 +9,8 @@ function [W, metrics] = rc_c2(H, config)
 %   H      - [num_antennas x num_users] channel matrix
 %            H(:,k) is the channel vector from transmitter to user k
 %   config - struct with fields:
-%            .gamma       : scalar or [num_users x 1] QoS/SNR targets (required)
-%            .noise_power : scalar or [num_users x 1] noise power (optional, default = 1.0)
+%            .gamma       : [num_users x 1] QoS/SNR targets (required)
+%            .noise_power : [num_users x 1] noise power (required)
 %
 % Outputs:
 %   W       - [num_antennas x 1] beamforming vector
@@ -33,29 +33,21 @@ function [W, metrics] = rc_c2(H, config)
 %% Configuration and defaults
 [num_antennas, num_users] = size(H);
 
-% Extract QoS requirements
+% Extract QoS requirements (must be pre-generated vector)
 if ~isfield(config, 'gamma')
     error('rc_c2:missingParameter', 'config.gamma is required');
 end
+gamma = config.gamma(:);
+assert(length(gamma) == num_users, ...
+    'gamma must be [num_users x 1] vector, got [%d x 1]', length(gamma));
 
-if isscalar(config.gamma)
-    gamma = config.gamma * ones(num_users, 1);
-else
-    gamma = config.gamma(:);
-    assert(length(gamma) == num_users, 'gamma must be scalar or [num_users x 1] vector');
+% Extract noise power (must be pre-generated vector)
+if ~isfield(config, 'noise_power')
+    error('rc_c2:missingParameter', 'config.noise_power is required');
 end
-
-% Extract noise power
-if isfield(config, 'noise_power')
-    if isscalar(config.noise_power)
-        sigma_k_squared = config.noise_power * ones(num_users, 1);
-    else
-        sigma_k_squared = config.noise_power(:);
-        assert(length(sigma_k_squared) == num_users, 'noise_power must be scalar or [num_users x 1] vector');
-    end
-else
-    sigma_k_squared = ones(num_users, 1);
-end
+sigma_k_squared = config.noise_power(:);
+assert(length(sigma_k_squared) == num_users, ...
+    'noise_power must be [num_users x 1] vector, got [%d x 1]', length(sigma_k_squared));
 
 %% Main algorithm: RC-C2 heuristic-based approach
 % Heuristic: The user with the smallest metric c_k^(-1) * ||h_k||_2^2

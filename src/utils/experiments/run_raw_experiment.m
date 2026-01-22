@@ -28,19 +28,8 @@ else
     num_streams = 1;
 end
 
-if isfield(config, 'noise_power')
-    noise_power = config.noise_power;
-else
-    noise_power = 1.0;
-end
-
-if isfield(config, 'gamma_linear')
-    gamma_linear = config.gamma_linear;
-elseif isfield(config, 'gamma_db')
-    gamma_linear = 10^(config.gamma_db / 10);
-else
-    error('Config must define gamma_linear or gamma_db');
-end
+% System parameters (noise and QoS) are now generated globally per K value
+% using generate_noise_parameters() and generate_qos_parameters()
 
 channel_config = struct();
 if isfield(config, 'channel')
@@ -108,19 +97,10 @@ for s = 1:num_scenarios
     for k_idx = 1:num_k
         num_users = k_list(k_idx);
 
-        if isscalar(gamma_linear)
-            gamma = gamma_linear * ones(num_users, 1);
-        else
-            assert(numel(gamma_linear) == num_users, 'gamma_linear must be scalar or length K');
-            gamma = gamma_linear(:);
-        end
-
-        if isscalar(noise_power)
-            noise_k = noise_power * ones(num_users, 1);
-        else
-            assert(numel(noise_power) == num_users, 'noise_power must be scalar or length K');
-            noise_k = noise_power(:);
-        end
+        % Generate system parameters globally for this K value
+        % These are generated once and reused across all scenarios and trials
+        gamma = generate_qos_parameters(num_users, config);
+        noise_k = generate_noise_parameters(num_users, config);
 
         for alg_idx = 1:num_algs
             method_field = method_fields{alg_idx};

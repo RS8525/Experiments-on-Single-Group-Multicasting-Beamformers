@@ -58,26 +58,26 @@ if isfield(config, 'seed')
 end
 
 % Extract parameters with defaults
+% Note: As of the refactoring, gamma and noise_power should be pre-generated
+% vectors. However, we maintain backward compatibility by allowing defaults.
 if isfield(config, 'gamma')
-    if isscalar(config.gamma)
-        gamma = config.gamma * ones(num_users, 1);  % Broadcast scalar to vector
-    else
-        gamma = config.gamma;
-        assert(length(gamma) == num_users, 'gamma must be [num_users x 1] vector');
-    end
+    gamma = config.gamma(:);
+    assert(length(gamma) == num_users, ...
+        'gamma must be [num_users x 1] vector, got [%d x 1]', length(gamma));
 else
-    gamma = ones(num_users, 1);  % Default QoS requirement
+    warning('sdr_beamformer:missingGamma', ...
+        'config.gamma not provided, using default value of 1.0 for all users');
+    gamma = ones(num_users, 1);
 end
 
 if isfield(config, 'noise_power')
-    noise_power = config.noise_power;
-    if isscalar(noise_power)
-        noise_power = noise_power * ones(num_users, 1);  % Broadcast scalar to vector
-    else
-        assert(length(noise_power) == num_users, 'noise_power must be scalar or [num_users x 1] vector');
-    end
+    noise_power = config.noise_power(:);
+    assert(length(noise_power) == num_users, ...
+        'noise_power must be [num_users x 1] vector, got [%d x 1]', length(noise_power));
 else
-    noise_power = ones(num_users, 1);  % Default noise power
+    warning('sdr_beamformer:missingNoisePower', ...
+        'config.noise_power not provided, using default value of 1.0 for all users');
+    noise_power = ones(num_users, 1);
 end
 
 if isfield(config, 'num_randomizations')    
