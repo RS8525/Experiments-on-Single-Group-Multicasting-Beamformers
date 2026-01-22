@@ -10,7 +10,6 @@ function [W, metrics] = sbfc(H, config)
 %   config - struct with fields:
 %            .gamma          : [num_users x 1] QoS/SNR targets (required)
 %            .noise_power    : [num_users x 1] noise power (required)
-%            .max_iterations : Maximum iterations (optional, default = 100)
 %            .rc_c2_fn       : Reference constraint function handle (optional)
 %
 % Outputs:
@@ -79,50 +78,53 @@ U = setdiff(1:num_users, l1);
 
 % Main iteration loop
 converged = false;
-for iter = 2:max_iters
+snr_gamma_iter = ones(1, num_users);
+l_prev = l1;
+
+for iter = 2:num_antennas
     % Step 6: Find most violated constraint
-    snr_k = zeros(1, num_users);
-    for k = U
-        snr_k(k) = abs(w' * h_orth(:, k))^2;
-    end
     
-    snr_all = abs(w' * h_orth).^2;
-    snr_ratio = snr_k(U) ./ snr_all(U);
+    snr_gamma_iter(U) = abs(w' * H(:, U)).^2 ./ c(U);
     
-    [~, idx] = max(snr_ratio);
-    l_n = U(idx);
+    
+    
+    
+    [min_snr_ratio, idx] = min(snr_gamma_iter(U));
+    l_iter = U(idx);
     
     % Step 7: Exit if all constraints met
-    if snr_ratio(idx) >= 1
+    if min_snr_ratio >= 1
         converged = true;
         break;
     end
     
     % Step 8: Orthogonalization
-    for k = U
-        h_orth(:, k) = rc_c2_fn(h_orth(:, k), h_orth(:, l_n));
-    end
+    h_norm_sq = vecnorm(h_orth(:, l_prev), 2)^2;
+    h_orth(:, U) = h_orth(:, U) - (h_orth(:, l_prev)' * h_orth(:, U)) / h_norm_sq * h_orth(:, l_prev);
     
-    % Step 9: Update filter
-    alpha_n = compute_alpha(snr_k(l_n), snr_all(l_n), w, h_orth(:, l_n));
-    w = w + alpha_n * (h_orth(:, l_n) / norm(h_orth(:, l_n), 2));
+    % Step 9: Update beamformer
+    alpha_iter = exp(-angle(w' * H(:, l_iter)) * 1i) * (sqrt(abs(w' * H(:, l_iter))^2 - c(l_iter)*snr_gamma_iter(l_iter)) - abs(w' * H(:, l_iter))) / vecnorm(h_orth(:, l_iter), 2);
+    w = w + alpha_iter * h_orth(:, l_iter);
     
     % Step 10: Update active set
-    U = setdiff(U, l_n);
+    U = setdiff(U, l_iter);
     
     % Exit if no more users in active set
     if isempty(U)
         converged = true;
         break;
     end
+    l_prev = l_iter;
 end
 
-% Output beamforming vector
-W = w;
+
+
 
 %% Compute final metrics
-% Received power at each user
-recv_power = abs(H' * W).^2;  % [num_users x 1]
+% Check feasability for num_users > num_antennas case and scale beamformer
+alpha_final = compute_scaling_factor(w, H, gamma, sigma_k_squared);
+W = alpha_final * w;
+recv_power = abs(H' * W).^2;  
 
 % SNR for each user
 snr = recv_power ./ sigma_k_squared;
@@ -158,24 +160,3 @@ end
 
 end
 
-%% Helper function
-function alpha = compute_alpha(snr_k, snr_l, w, h_l)
-% COMPUTE_ALPHA Compute step size for filter update
-%
-% Inputs:
-%   snr_k : SNR at user k
-%   snr_l : Total SNR at user l
-%   w     : Current beamforming vector
-%   h_l   : Channel vector for user l
-%
-% Output:
-%   alpha : Step size for beamforming update
-
-h_l_norm = norm(h_l, 2);
-if h_l_norm < eps
-    alpha = 0;
-else
-    alpha = (sqrt(snr_k) - sqrt(snr_l)) / h_l_norm;
-end
-
-end
