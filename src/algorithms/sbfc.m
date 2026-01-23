@@ -10,19 +10,16 @@ function [W, metrics] = sbfc(H, config)
 %   config - struct with fields:
 %            .gamma          : [num_users x 1] QoS/SNR targets (required)
 %            .noise_power    : [num_users x 1] noise power (required)
-%            .rc_c2_fn       : Reference constraint function handle (optional)
 %
 % Outputs:
 %   W       - [num_antennas x 1] beamforming vector
 %   metrics - struct with fields:
 %             .num_iters      : number of iterations performed
-%             .converged      : true if all constraints satisfied
 %             .final_power    : final transmit power
 %             .snr            : [num_users x 1] SNR per user
 %             .min_snr        : minimum SNR across users
 %             .rate           : sum rate in bits/s/Hz
 %             .feasible       : true if QoS constraints satisfied
-%             .h_orth         : orthogonalized channels
 %             .status_message : descriptive status string
 
 %% Configuration and defaults
@@ -51,13 +48,6 @@ else
     max_iters = 100;
 end
 
-% Extract RC-C2 function (default: simple projection)
-if isfield(config, 'rc_c2_fn')
-    rc_c2_fn = config.rc_c2_fn;
-else
-    % Default orthogonalization function
-    rc_c2_fn = @(h_k, h_l) h_k - (h_k' * h_l) / (h_l' * h_l) * h_l;
-end
 
 %% Main SBFC Algorithm
 
@@ -111,7 +101,6 @@ for iter = 2:num_antennas
     
     % Exit if no more users in active set
     if isempty(U)
-        converged = true;
         break;
     end
     l_prev = l_iter;
@@ -144,15 +133,13 @@ feasible = all(snr >= gamma * (1 - tol_feas));
 
 % Populate metrics structure
 metrics.num_iters = iter;
-metrics.converged = converged;
 metrics.final_power = final_power;
 metrics.snr = snr;
 metrics.min_snr = min_snr;
 metrics.rate = rate;
 metrics.feasible = feasible;
-metrics.h_orth = h_orth;
 
-if converged
+if feasible
     metrics.status_message = sprintf('Converged after %d iterations', iter);
 else
     metrics.status_message = sprintf('Max iterations reached (%d)', max_iters);

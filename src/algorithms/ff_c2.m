@@ -16,8 +16,6 @@ function [W, metrics] = ff_c2(H, config)
 % Outputs:
 %   W       - [num_antennas x 1] beamforming vector
 %   metrics - struct with fields:
-%             .num_pairs       : number of user pairs considered (K*(K-1)/2)
-%             .best_pair       : indices [i, j] of the best user pair
 %             .final_power     : final transmit power
 %             .snr             : [num_users x 1] SNR per user
 %             .min_snr         : minimum SNR across users
@@ -110,8 +108,6 @@ rate = sum(log2(1 + snr));
 feasible = all(snr >= gamma * (1 - 1e-8));
 
 % Populate metrics structure
-metrics.num_pairs = num_pairs;
-metrics.best_pair = best_pair;
 metrics.final_power = best_power;
 metrics.snr = snr;
 metrics.min_snr = min_snr;
@@ -119,7 +115,7 @@ metrics.rate = rate;
 metrics.feasible = feasible;
 
 if feasible
-    metrics.status_message = sprintf('Optimal solution found (pair: %d, %d)', best_pair(1), best_pair(2));
+    metrics.status_message = sprintf('Optimal solution found');
 else
     metrics.status_message = sprintf('Solution found but infeasible (pair: %d, %d)', best_pair(1), best_pair(2));
 end

@@ -20,7 +20,6 @@ function [W, metrics] = sdr_beamformer(H, config)
 %             .cvx_status         : CVX solver status
 %             .cvx_optval         : optimal value from CVX (trace of X)
 %             .solve_time         : solver time in seconds
-%             .num_randomizations : number of randomizations performed
 %             .best_power         : transmit power of best randomized solution
 %             .final_power        : final transmit power (same as best_power)
 %             .snr                : [num_users x 1] SNR per user
@@ -217,7 +216,6 @@ else
 end
 
 
-metrics.num_randomizations = num_randomizations;
 W = W_best;
 
 %% Compute final metrics using the chosen W
