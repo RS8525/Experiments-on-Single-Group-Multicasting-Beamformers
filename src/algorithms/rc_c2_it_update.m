@@ -21,7 +21,6 @@ function [W, metrics] = rc_c2_it_update(H, config)
 % Reference:
 %   Paper: "Design of Single-Group Multicasting-Beamformers"
 
-%% Configuration and defaults
 
 %% Configuration and defaults
 [num_antennas, num_users] = size(H);
@@ -175,10 +174,8 @@ metrics.min_snr = min_snr;
 metrics.rate = rate;
 metrics.feasible = feasible;
 
-if feasible
-    metrics.status_message = sprintf('Completed %d iterations (feasible)', max_iters);
-else
-    metrics.status_message = sprintf('Completed %d iterations (infeasible)', max_iters);
+if ~feasible
+    metrics.status_message = [metrics.status_message, ' (WARNING: SNR constraints not fully satisfied)'];
 end
 
 end

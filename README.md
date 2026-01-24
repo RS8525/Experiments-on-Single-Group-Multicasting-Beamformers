@@ -120,5 +120,5 @@ rate = compute_sum_rate(snr);
 
 - Paper: "Design of Single-Group Multicasting-Beamformers"
 - See `paper/` directory for the original paper and notes
-- See `doc/` directory for theory overview and notation mapping
+
 

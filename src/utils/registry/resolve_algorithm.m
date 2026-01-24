@@ -24,6 +24,8 @@ switch name
         fn_name = 'sbfc';
     case 'rc_c2_update'
         fn_name = 'rc_c2_update';
+    case 'rc_c2_it_update'
+        fn_name = 'rc_c2_it_update';
     otherwise
         error('Unknown algorithm: %s', name);
 end

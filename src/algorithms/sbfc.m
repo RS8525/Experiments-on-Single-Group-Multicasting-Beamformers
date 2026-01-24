@@ -139,10 +139,8 @@ metrics.min_snr = min_snr;
 metrics.rate = rate;
 metrics.feasible = feasible;
 
-if feasible
-    metrics.status_message = sprintf('Converged after %d iterations', iter);
-else
-    metrics.status_message = sprintf('Max iterations reached (%d)', max_iters);
+if ~feasible
+    metrics.status_message = [metrics.status_message, ' (WARNING: SNR constraints not fully satisfied)'];
 end
 
 end

@@ -129,11 +129,8 @@ metrics.min_snr = min_snr;
 metrics.rate = rate;
 metrics.feasible = feasible;
 
-if feasible
-    metrics.status_message = sprintf('Solution found');
-else
-    metrics.status_message = sprintf('Solution found but infeasible (pair: %d, %d; selected user: %d)', ...
-                                     best_pair(1), best_pair(2), k_star);
+if ~feasible
+    metrics.status_message = [metrics.status_message, ' (WARNING: SNR constraints not fully satisfied)'];
 end
 
 end
