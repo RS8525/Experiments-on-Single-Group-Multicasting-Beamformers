@@ -147,6 +147,9 @@ end
 X_opt = X;
 metrics.cvx_optval = cvx_optval;
 
+%Bound to dB
+metrics.cvx_optval_db = 10*log10(cvx_optval);
+
 
 %% Gaussian randomization to extract rank-1 beamformer
 if ~(X_opt == X_opt')  % Ensure Hermitian
@@ -219,7 +222,6 @@ end
 W = W_best;
 
 %% Compute final metrics using the chosen W
-best_power;
 snr = zeros(num_users, 1);
 for k = 1:num_users
     snr(k) = abs(H(:, k)' * W_best)^2 / noise_power(k);
@@ -232,6 +234,9 @@ tolerance = 1e-6;
 feasible = all(snr >= gamma * (1 - tolerance));
 
 % Update metrics
+metrics.power_db = 10*log10(best_power);
+metrics.snr_db = 10*log10(snr);
+metrics.min_snr_db = 10*log10(min_snr);
 metrics.final_power = best_power;
 metrics.snr = snr;
 metrics.min_snr = min_snr;

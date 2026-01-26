@@ -50,3 +50,9 @@ Robust Adaptive Beamforming Using Worst-Case Performance Optimization.pdf
 Transmit_beamforming_for_physical-layer_multicasting.pdf
 
 .gitignore
+
+TODOS.md
+MISMATCH_ANALYSIS.md
+config/*
+config/experiments/
+

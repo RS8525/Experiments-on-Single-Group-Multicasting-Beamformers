@@ -6,7 +6,7 @@
     {
       "name": "sdr_beamformer_5x2_gamma0.1",
       "algorithm": "sdr_beamformer",
-      "num_randomizations": 20,
+      "num_randomizations": 50,
       "num_antennas": 5,
       "num_users": 2,
       "gamma_k": [1],

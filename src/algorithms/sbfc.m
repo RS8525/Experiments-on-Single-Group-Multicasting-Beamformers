@@ -131,7 +131,11 @@ final_power = norm(W)^2;
 tol_feas = 1e-6;
 feasible = all(snr >= gamma * (1 - tol_feas));
 
+
 % Populate metrics structure
+metrics.power_db = 10*log10(best_power);
+metrics.snr_db = 10*log10(snr);
+metrics.min_snr_db = 10*log10(min_snr);
 metrics.num_iters = iter;
 metrics.final_power = final_power;
 metrics.snr = snr;

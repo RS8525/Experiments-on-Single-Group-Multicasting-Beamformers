@@ -8,6 +8,7 @@ function [W, metrics] = rc_c2_it_update(H, config)
 %            .gamma       : [num_users x 1] QoS/SNR targets (required)
 %            .noise_power : [num_users x 1] noise power (required) 
 %            .max_iterations : maximum number of iterations (optional, default: 100)   
+%            .alpha_max : maximum step size (optional, default: 0.2)
 %
 % Outputs:
 %   W       - [num_antennas x 1] beamforming vector
@@ -60,23 +61,25 @@ end
 [w, ~] = rc_c2(H, config);
 
 %% Initialize algorithm parameters
+constraint_constant = gamma .* sigma_k_squared;  % Cost vector
 alpha = alpha_max;  % Current step size
 new_w = 1;          % Semaphore: 1 indicates w changed in previous iteration
 dw = [];            % Update direction (saved between iterations)
-m_min = inf;        % Minimum metric from previous iteration
+recv_power_init = abs(H' * w).^2;
+m_min = min(recv_power_init ./ constraint_constant); 
 
 %% Main iterative update loop
 for n = 1:max_iters
     
-    % Lines 4-10: Compute update direction when w hasn't changed
+    % Lines 4-10: Compute update direction when w has changed
     if new_w == 1
         % Line 5: Find weakest constraint (search 'weakest' constr.)
         % Compute SNR for each user
         recv_power = abs(H' * w).^2;  % [K x 1]
-        snr_k = recv_power ./ sigma_k_squared;
+        
         
         % Find user with minimum SNR/gamma ratio
-        [m_min, ell] = min(snr_k ./ gamma);
+        [m_min, ell] = min(recv_power ./ constraint_constant);
         
         % Line 7: Orthogonalize channel (Eq. 38)
         % h̃_ℓ(n) = h_ℓ(n) - (w^(n)^H * h_ℓ(n)) / P_tr * w^(n)
@@ -84,14 +87,14 @@ for n = 1:max_iters
         P_tr = norm(w)^2;  % Current transmit power
         
         % Orthogonalization: remove component of w from h_ell
-        h_ell_tilde = h_ell - (w' * h_ell) / P_tr * w;
+        h_ell_orth = h_ell - (w' * h_ell) / P_tr * w;
         
         % Line 8: Normalize to get update direction (Eq. 39)
         % w^(n)⊥ = h̃_ℓ(n) / ||h̃_ℓ(n)||_2
-        norm_h_tilde = norm(h_ell_tilde);
+        norm_h_orth = norm(h_ell_orth);
         
-        if norm_h_tilde > eps
-            w_perp = h_ell_tilde / norm_h_tilde;
+        if norm_h_orth > eps
+            w_perp = h_ell_orth / norm_h_orth;
         else
             % If orthogonalized channel is zero, use original direction
             w_perp = h_ell / norm(h_ell);
@@ -103,12 +106,11 @@ for n = 1:max_iters
     
     % Line 11: Compute magnitude of β (Eq. 32)
     % |β| = √(P_tr(2α - α²))
-    P_tr = norm(w)^2;
     beta_mag = sqrt(P_tr * (2*alpha - alpha^2));
     
     % Compute phase of β: angle(w^(n)^H * h_ℓ(n))
     % Note: We use the current w and the direction dw
-    beta_phase = angle(w' * dw);
+    beta_phase = - angle(w' * h_ell);
     beta = beta_mag * exp(1j * beta_phase);
     
     % Line 12: Compute tentative update (Eq. 29)
@@ -118,8 +120,7 @@ for n = 1:max_iters
     % Line 13: Evaluate if update improves minimum metric
     % Compute SNRs for tentative beamformer
     recv_power_temp = abs(H' * w_temp).^2;
-    snr_temp = recv_power_temp ./ sigma_k_squared;
-    min_metric_temp = min(snr_temp ./ gamma);
+    min_metric_temp = min(recv_power_temp ./ constraint_constant);
     
     % Lines 13-21: Accept or reject update
     if min_metric_temp > m_min
@@ -166,7 +167,11 @@ final_power = norm(W)^2;
 tol_feas = 1e-6;
 feasible = all(snr >= gamma * (1 - tol_feas));
 
+
 % Populate metrics structure
+metrics.power_db = 10*log10(best_power);
+metrics.snr_db = 10*log10(snr);
+metrics.min_snr_db = 10*log10(min_snr);
 metrics.num_iters = max_iters;
 metrics.final_power = final_power;
 metrics.snr = snr;

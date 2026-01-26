@@ -56,26 +56,71 @@ Implementation and comparison of multicast beamforming algorithms from the paper
    
    Results are saved to `results/raw/<experiment_name>/raw_results.mat`
 
-3. **Generate plots**:
+3. **Process the results**: Compute summary statistics from raw experiment data
+   ```matlab
+   process_raw_results('results/raw/fig4/raw_results.mat', ...
+                       'results/processed/fig4/processed_results.mat')
+   ```
+   
+   This computes mean, median, percentiles (p25, p75), min, and max for all metrics.
+
+4. **Generate plots**:
+   
+   **Option A - Quick plotting (single method/scenario)**:
    ```matlab
    cd plotting
-   plot_results_example
+   plot_example_results  % Interactive - automatically finds your results
+   ```
+   
+   **Option B - Multi-method comparison plots**:
+   ```matlab
+   % Plot mean power vs K for all methods
+   plotting_processed('results/processed/fig4/processed_results.mat', ...
+                      'mean', 'power', ...
+                      'SavePath', 'results/figures/power_comparison.png')
+   
+   % Plot mean minimum SNR vs K
+   plotting_processed('results/processed/fig4/processed_results.mat', ...
+                      'mean', 'min_snr', ...
+                      'SavePath', 'results/figures/min_snr_comparison.png')
+   
+   % Plot feasibility rate
+   plotting_processed('results/processed/fig4/processed_results.mat', ...
+                      'mean', 'feasible', ...
+                      'SavePath', 'results/figures/feasibility_comparison.png')
    ```
    
    Figures are saved to `results/figures/`
 
+### Available Metrics for Plotting
+
+- **`power`** - Total transmit power
+- **`min_snr`** - Minimum SNR across all users
+- **`snr_mean`** - Average SNR across all users
+- **`feasible`** - Feasibility rate (0 = infeasible, 1 = feasible)
+- **`solve_time`** - Algorithm computation time
+
+### Available Statistics
+
+- **`mean`** - Mean across trials
+- **`median`** - Median across trials
+- **`p25`** - 25th percentile
+- **`p75`** - 75th percentile
+- **`min`** - Minimum value
+- **`max`** - Maximum value
+
 ## Implemented Algorithms
 
 ### Main Algorithms
-- **FF-C2**: Fixed-point algorithm (Criterion 2)
-- **RC-C2**: Randomized coordinate descent (Criterion 2)
-- **SBFC**: Sequential beamformer computation
-- **SDR**: Semi-definite relaxation
-- **SQP**: Sequential quadratic programming
+- **FF-C2** (`ff_c2`): Full Featured Combine-2 algorithm
+- **RC-C2** (`rc_c2`): Reduced Complexity Combine-2 with heuristic
+- **RC-C2-IT** (`rc_c2_it_update`): RC-C2 with iterative SNR increasing updates (Algorithm 2)
+- **SBFC** (`sbfc`): Sequential beamformer computation
+- **SDR** (`sdr_beamformer`): Semi-definite relaxation with randomization
 
 ### Baselines
-- **Zero-Forcing**: Zero-forcing beamformer
-- **MRT**: Maximum ratio transmission
+- **Zero-Forcing**: Zero-forcing beamformer (to be implemented)
+- **MRT**: Maximum ratio transmission (to be implemented)
 
 ## Design Principles
 
