@@ -105,7 +105,7 @@ end
 rhs = noise_power .* gamma;  % [num_users x 1]
 
 %% Solve SDR via CVX using SeDuMi
-cvx_solver sedumi;
+
 tic;
 cvx_begin sdp
     if cvx_quiet_mode

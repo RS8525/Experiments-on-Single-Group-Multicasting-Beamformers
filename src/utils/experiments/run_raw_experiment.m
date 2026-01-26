@@ -113,7 +113,8 @@ for s = 1:num_scenarios
             results.raw.(scenario_field).methods.(method_field).cvx_optval{k_idx} = nan(1, num_trials);
         end
         if has_sdr
-            results.raw.(scenario_field).methods.BOUND.cvx_optval{k_idx} = nan(1, num_trials);
+            results.raw.(scenario_field).methods.BOUND.power_db{k_idx} = nan(1, num_trials);
+            results.raw.(scenario_field).methods.BOUND.power{k_idx} = nan(1, num_trials);
         end
 
         logf('Scenario %s (N=%d), K=%d', scenario_name, num_antennas, num_users);
@@ -141,30 +142,27 @@ for s = 1:num_scenarios
                 try
                     [W, metrics] = algo_fns{alg_idx}(H, algo_params);
 
-                    if isfield(metrics, 'snr') && ~isempty(metrics.snr)
-                        snr = metrics.snr(:);
-                    else
-                        snr_config = struct('noise_power', noise_k);
-                        snr = compute_snr(W, H, snr_config);
-                    end
-
                     if isfield(metrics, 'final_power')
-                        power = metrics.final_power;
-                    else
-                        power = norm(W, 'fro')^2;
+                        results.raw.(scenario_field).methods.(method_field).power{k_idx}(trial) = metrics.final_power;
                     end
-
-                    min_snr = min(snr);
-
-                    results.raw.(scenario_field).methods.(method_field).power{k_idx}(trial) = power;
-                    results.raw.(scenario_field).methods.(method_field).min_snr{k_idx}(trial) = min_snr;
-                    results.raw.(scenario_field).methods.(method_field).snr{k_idx}(:, trial) = snr;
+                    if isfield(metrics, 'min_snr')
+                        results.raw.(scenario_field).methods.(method_field).min_snr{k_idx}(trial) = metrics.min_snr;
+                    end
+                    if isfield(metrics, 'snr')
+                    results.raw.(scenario_field).methods.(method_field).snr{k_idx}(:, trial) = metrics.snr;
+                    end
+                    if isfield(metrics, 'final_power_db')
+                        results.raw.(scenario_field).methods.(method_field).power_db{k_idx}(trial) = metrics.final_power_db;
+                    end
+                    if isfield(metrics, 'min_snr_db')
+                        results.raw.(scenario_field).methods.(method_field).min_snr_db{k_idx}(trial) = metrics.min_snr_db;
+                    end
+                    if isfield(metrics, 'snr_db')
+                    results.raw.(scenario_field).methods.(method_field).snr_db{k_idx}(:, trial) = metrics.snr_db;
+                    end
 
                     if isfield(metrics, 'feasible')
                         feasible = metrics.feasible;
-                    else
-                        tol = 1e-6;
-                        feasible = all(snr >= gamma * (1 - tol));
                     end
                     results.raw.(scenario_field).methods.(method_field).feasible{k_idx}(trial) = feasible;
 
@@ -178,10 +176,13 @@ for s = 1:num_scenarios
                         results.raw.(scenario_field).methods.(method_field).status{k_idx}{trial} = '';
                     end
                     if isfield(metrics, 'cvx_optval')
-                        results.raw.(scenario_field).methods.(method_field).cvx_optval{k_idx}(trial) = metrics.cvx_optval;
+                        results.raw.(scenario_field).methods.BOUND.power{k_idx}(trial) = metrics.cvx_optval;
                         if has_sdr && strcmpi(algo_names{alg_idx}, 'sdr_beamformer')
-                            results.raw.(scenario_field).methods.BOUND.cvx_optval{k_idx}(trial) = metrics.cvx_optval;
+                            results.raw.(scenario_field).methods.BOUND.power{k_idx}(trial) = metrics.cvx_optval;
                         end
+                    end
+                    if isfield(metrics, 'cvx_optval_db')
+                        results.raw.(scenario_field).methods.BOUND.power_db{k_idx}(trial) = metrics.cvx_optval_db;
                     end
 
                 catch ME
