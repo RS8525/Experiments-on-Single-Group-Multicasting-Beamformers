@@ -10,7 +10,6 @@ Implementation and comparison of multicast beamforming algorithms from the paper
 |-- README.md                  # This file
 |-- MASTER_HINTS.md           # Development guidelines and design principles
 |-- paper/                    # Original paper and reading notes
-|-- doc/                      # Theory overview, notation mapping, algorithm glossary
 |-- config/                   # Experiment configuration files
 |   |-- experiments/          # Specific experiment configs
 |   |-- defaults/             # Default parameter configs
@@ -23,7 +22,7 @@ Implementation and comparison of multicast beamforming algorithms from the paper
 |   |   |-- config/           # Config loading
 |   |   |-- experiments/      # Experiment execution helpers
 |   |   |-- logging/          # Logging utilities
-|   |   |-- metrics/          # SNR and rate metrics
+|   |   |-- parameters/       # Parameter generation
 |   |   |-- random/           # Random seed management
 |   |   |-- registry/         # Algorithm and channel registries
 |   |   |-- validation/       # Constraint checks

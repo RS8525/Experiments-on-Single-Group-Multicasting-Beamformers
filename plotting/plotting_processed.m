@@ -4,7 +4,7 @@ function plotting_processed(processed_path, stat_name, metric_name, varargin)
 % Inputs:
 %   processed_path - Path to processed_results.mat
 %   stat_name      - 'mean', 'median', 'p25', 'p75', 'min', or 'max'
-%   metric_name    - 'power', 'min_snr', 'snr_mean', 'cvx_optval', 'feasible', 'solve_time'
+%   metric_name    - 'power', 'min_snr', 'snr_mean', 'cvx_optval', 'feasible', 'solve_time', 'power_db', 'min_snr_db'
 %
 % Name-value options:
 %   'Scenario' - Scenario name or field (optional)
@@ -116,7 +116,7 @@ function metric_name = normalize_metric_name(metric_name)
     if strcmp(metric_name, 'snr')
         metric_name = 'min_snr';
     end
-    valid = {'power', 'min_snr', 'snr_mean', 'cvx_optval', 'feasible', 'solve_time'};
+    valid = {'power', 'min_snr', 'snr_mean', 'cvx_optval', 'feasible', 'solve_time', 'power_db', 'min_snr_db'};
     if ~ismember(metric_name, valid)
         error('Invalid metric_name: %s', metric_name);
     end
@@ -136,8 +136,11 @@ function label = metric_label(metric_name)
             label = 'Feasibility Rate';
         case 'solve_time'
             label = 'Solve Time (s)';
-        otherwise
+        case 'power_db'
             label = metric_name;
+        case 'min_snr_db'
+            label = metric_name;
+        otherwise
     end
 end
 

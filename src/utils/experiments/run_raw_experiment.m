@@ -151,8 +151,8 @@ for s = 1:num_scenarios
                     if isfield(metrics, 'snr')
                     results.raw.(scenario_field).methods.(method_field).snr{k_idx}(:, trial) = metrics.snr;
                     end
-                    if isfield(metrics, 'final_power_db')
-                        results.raw.(scenario_field).methods.(method_field).power_db{k_idx}(trial) = metrics.final_power_db;
+                    if isfield(metrics, 'power_db')
+                        results.raw.(scenario_field).methods.(method_field).power_db{k_idx}(trial) = metrics.power_db;
                     end
                     if isfield(metrics, 'min_snr_db')
                         results.raw.(scenario_field).methods.(method_field).min_snr_db{k_idx}(trial) = metrics.min_snr_db;

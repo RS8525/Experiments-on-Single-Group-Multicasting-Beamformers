@@ -54,7 +54,9 @@ for s = 1:numel(scenario_fields)
         metrics.snr_mean = init_stats(num_k);
         metrics.feasible = init_stats(num_k);
         metrics.solve_time = init_stats(num_k);
-        metrics.cvx_optval = init_stats(num_k);
+        metrics.power_db = init_stats(num_k);
+        metrics.snr_db = init_stats(num_k);
+        metrics.min_snr_db = init_stats(num_k);
 
         for k_idx = 1:num_k
             if isfield(method, 'power') && ~isempty(method.power)
@@ -76,8 +78,18 @@ for s = 1:numel(scenario_fields)
             if isfield(method, 'solve_time') && ~isempty(method.solve_time)
                 metrics.solve_time = assign_stats(metrics.solve_time, k_idx, method.solve_time{k_idx});
             end
-            if isfield(method, 'cvx_optval') && ~isempty(method.cvx_optval)
-                metrics.cvx_optval = assign_stats(metrics.cvx_optval, k_idx, method.cvx_optval{k_idx});
+            if isfield(method, 'power_db') && ~isempty(method.power_db)
+                metrics.power_db = assign_stats(metrics.power_db, k_idx, method.power_db{k_idx});
+            end
+            if isfield(method, 'snr_db') && ~isempty(method.snr_db)
+                snr_db_mat = method.snr_db{k_idx};
+                if ~isempty(snr_db_mat)
+                    snr_db_mean = mean(snr_db_mat, 1, 'omitnan');
+                    metrics.snr_db = assign_stats(metrics.snr_db, k_idx, snr_db_mean);
+                end
+            end
+            if isfield(method, 'min_snr_db') && ~isempty(method.min_snr_db)
+                metrics.min_snr_db = assign_stats(metrics.min_snr_db, k_idx, method.min_snr_db{k_idx});
             end
         end
 
