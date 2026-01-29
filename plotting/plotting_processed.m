@@ -158,6 +158,16 @@ end
 function name = format_method_name(method_field)
     if strcmpi(method_field, 'BOUND')
         name = '[BOUND]';
+    elseif strcmpi(method_field, 'sdr_beamformer')
+        name = '[Sedumi + Rand]';
+    elseif strcmpi(method_field, 'ff_c2')
+        name = '[FF-C2]';
+    elseif strcmpi(method_field, 'rc_c2')
+        name = '[RC-C2]';
+    elseif strcmpi(method_field, 'sbfc')
+        name = '[SBFC]';
+    elseif strcmpi(method_field, 'rc_c2_it_update')
+        name = '[RC-C2 + it. Update]';
     else
         name = method_field;
     end
