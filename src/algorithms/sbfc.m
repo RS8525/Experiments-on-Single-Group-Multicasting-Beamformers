@@ -58,7 +58,7 @@ c = gamma .* sigma_k_squared;
 h_orth = H;
 
 % Step 2: Select weakest user (most violated constraint)
-[~, l1] = min(c .* vecnorm(h_orth, 2, 1).^2);
+[~, l1] = min((vecnorm(h_orth).^2)' ./ c);
 
 % Step 3: Set initial filter
 w = h_orth(:, l1) / norm(h_orth(:, l1), 2);
@@ -74,12 +74,12 @@ l_prev = l1;
 for iter = 2:num_antennas
     % Step 6: Find most violated constraint
     
-    snr_gamma_iter(U) = abs(w' * H(:, U)).^2 ./ c(U);
+    % Compute SNR/gamma ratio for active users
+    recv_power_U = abs(w' * H(:, U)).^2;
+    snr_gamma_temp = recv_power_U' ./ c(U);
     
-    
-    
-    
-    [min_snr_ratio, idx] = min(snr_gamma_iter(U));
+    [min_snr_ratio, idx] = min(snr_gamma_temp);
+    snr_gamma_iter(U) = snr_gamma_temp(:);
     l_iter = U(idx);
     
     % Step 7: Exit if all constraints met
@@ -90,7 +90,8 @@ for iter = 2:num_antennas
     
     % Step 8: Orthogonalization
     h_norm_sq = vecnorm(h_orth(:, l_prev), 2)^2;
-    h_orth(:, U) = h_orth(:, U) - (h_orth(:, l_prev)' * h_orth(:, U)) / h_norm_sq * h_orth(:, l_prev);
+    proj_coeffs = (h_orth(:, l_prev)' * h_orth(:, U)) / h_norm_sq;
+    h_orth(:, U) = h_orth(:, U) - h_orth(:, l_prev) * proj_coeffs;
     
     % Step 9: Update beamformer
     alpha_iter = exp(-angle(w' * H(:, l_iter)) * 1i) * (sqrt(abs(w' * H(:, l_iter))^2 - c(l_iter)*snr_gamma_iter(l_iter)) - abs(w' * H(:, l_iter))) / vecnorm(h_orth(:, l_iter), 2);
@@ -113,38 +114,16 @@ end
 % Check feasability for num_users > num_antennas case and scale beamformer
 alpha_final = compute_scaling_factor(w, H, gamma, sigma_k_squared);
 W = alpha_final * w;
-recv_power = abs(H' * W).^2;  
 
-% SNR for each user
-snr = recv_power ./ sigma_k_squared;
+% Use centralized metrics computation for consistency
+metrics = compute_beamformer_metrics(W, H, config);
 
-% Minimum SNR across users
-min_snr = min(snr);
-
-% Sum rate in bits/s/Hz
-rate = sum(log2(1 + snr));
-
-% Final transmit power
-final_power = norm(W)^2;
-
-% Check feasibility (with small tolerance)
-tol_feas = 1e-6;
-feasible = all(snr >= gamma * (1 - tol_feas));
-
-
-% Populate metrics structure
-metrics.power_db = 10*log10(best_power);
-metrics.snr_db = 10*log10(snr);
-metrics.min_snr_db = 10*log10(min_snr);
+% Add algorithm-specific metrics
 metrics.num_iters = iter;
-metrics.final_power = final_power;
-metrics.snr = snr;
-metrics.min_snr = min_snr;
-metrics.rate = rate;
-metrics.feasible = feasible;
 
-if ~feasible
-    metrics.status_message = [metrics.status_message, ' (WARNING: SNR constraints not fully satisfied)'];
+% Add algorithm-specific status message if infeasible
+if ~metrics.feasible
+    metrics.status_message = 'WARNING: QoS constraints not satisfied at actual power';
 end
 
 end

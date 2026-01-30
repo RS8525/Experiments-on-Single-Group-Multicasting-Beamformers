@@ -22,6 +22,7 @@ Implementation and comparison of multicast beamforming algorithms from the paper
 |   |   |-- config/           # Config loading
 |   |   |-- experiments/      # Experiment execution helpers
 |   |   |-- logging/          # Logging utilities
+|   |   |-- metrics/          # SNR and rate metrics
 |   |   |-- parameters/       # Parameter generation
 |   |   |-- random/           # Random seed management
 |   |   |-- registry/         # Algorithm and channel registries
@@ -93,11 +94,31 @@ Implementation and comparison of multicast beamforming algorithms from the paper
 
 ### Available Metrics for Plotting
 
-- **`power`** - Total transmit power
-- **`min_snr`** - Minimum SNR across all users
-- **`snr_mean`** - Average SNR across all users
-- **`feasible`** - Feasibility rate (0 = infeasible, 1 = feasible)
+- **`power`** - Total transmit power (always actual power, never normalized)
+- **`min_snr`** - Minimum SNR across all users (can be normalized to P_tr if configured)
+- **`snr_mean`** - Average SNR across all users (can be normalized to P_tr if configured)
+- **`feasible`** - Feasibility rate (0 = infeasible, 1 = feasible) - always checks actual SNR
 - **`solve_time`** - Algorithm computation time
+
+### Power Normalization (P_tr)
+
+For fair algorithm comparison, SNR metrics can be normalized to a reference power budget:
+
+- **Without P_tr** (default): SNR computed from actual beamformer power
+- **With P_tr**: SNR computed as if beamformer was scaled to power budget P_tr
+- **Important**: The beamformer W itself is never modified - only the SNR metric is scaled
+- **Feasibility check**: Always uses actual SNR from the original beamformer
+
+**Configuration example**:
+```json
+{
+  "P_tr": 1.0,
+  "gamma": [1.0, 1.0, 1.0, 1.0],
+  "noise_power": [1.0, 1.0, 1.0, 1.0]
+}
+```
+
+**Use case**: Compare algorithms that naturally converge to different power levels by normalizing their SNR to the same reference power P_tr.
 
 ### Available Statistics
 
@@ -141,10 +162,27 @@ set_global_seed(42);
 % Run algorithm
 [W, metrics] = ff_c2(H, config);
 
-% Compute performance
-snr = compute_snr(W, H, config);
-rate = compute_sum_rate(snr);
+% Check results
+fprintf('Power: %.4f W, Min SNR: %.4f, Feasible: %d\n', ...
+        metrics.final_power, metrics.min_snr, metrics.feasible);
+
+% Run with power normalization for fair comparison
+config.P_tr = 1.0;  % Reference power budget
+[W2, metrics2] = rc_c2(H, config);
+fprintf('RC-C2 normalized min SNR: %.4f (at P_tr=%.1f W)\n', ...
+        metrics2.min_snr, config.P_tr);
 ```
+
+## Metrics Computation
+
+All algorithms use a centralized metrics utility (`compute_beamformer_metrics.m`) that computes:
+- **final_power**: Actual transmit power ||W||²
+- **snr**: Per-user SNR (normalized to P_tr if configured)
+- **min_snr**: Minimum SNR across users
+- **rate**: Sum rate
+- **feasible**: QoS constraint satisfaction (checked against actual SNR)
+
+The beamformer W is never modified - only metrics are optionally normalized.
 
 ## Adding New Algorithms
 

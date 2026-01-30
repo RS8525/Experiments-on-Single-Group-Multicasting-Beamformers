@@ -107,33 +107,12 @@ end
 W = best_w;
 
 %% Compute final metrics
-% Received power at each user
-recv_power = abs(H' * W).^2;  % [num_users x 1]
+% Use centralized metrics computation for consistency
+metrics = compute_beamformer_metrics(W, H, config);
 
-% SNR for each user
-snr = recv_power ./ sigma_k_squared;
-
-% Minimum SNR across users
-min_snr = min(snr);
-
-% Sum rate in bits/s/Hz
-rate = sum(log2(1 + snr));
-
-% Check feasibility (with small tolerance)
-feasible = all(snr >= gamma * (1 - 1e-8));
-
-% Populate metrics structure
-metrics.power_db = 10*log10(best_power);
-metrics.snr_db = 10*log10(snr);
-metrics.min_snr_db = 10*log10(min_snr);
-metrics.final_power = best_power;
-metrics.snr = snr;
-metrics.min_snr = min_snr;
-metrics.rate = rate;
-metrics.feasible = feasible;
-
-if ~feasible
-    metrics.status_message = [metrics.status_message, ' (WARNING: SNR constraints not fully satisfied)'];
+% Add algorithm-specific status message if infeasible
+if ~metrics.feasible
+    metrics.status_message = 'WARNING: QoS constraints not satisfied at actual power';
 end
 
 end

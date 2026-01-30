@@ -145,42 +145,19 @@ for n = 1:max_iters
 end
 
 %% Compute final metrics
-% Final beamforming vector
-W = w;
+% Final beamforming vector by scaling w down
+alpha = compute_scaling_factor(w, H, gamma, sigma_k_squared);
+W = alpha * w;
 
-% Received power at each user
-recv_power = abs(H' * W).^2;  % [num_users x 1]
+% Use centralized metrics computation for consistency
+metrics = compute_beamformer_metrics(W, H, config);
 
-% SNR for each user
-snr = recv_power ./ sigma_k_squared;
-
-% Minimum SNR across users
-min_snr = min(snr);
-
-% Sum rate in bits/s/Hz
-rate = sum(log2(1 + snr));
-
-% Final transmit power
-final_power = norm(W)^2;
-
-% Check feasibility (with small tolerance)
-tol_feas = 1e-6;
-feasible = all(snr >= gamma * (1 - tol_feas));
-
-
-% Populate metrics structure
-metrics.power_db = 10*log10(final_power);
-metrics.snr_db = 10*log10(snr);
-metrics.min_snr_db = 10*log10(min_snr);
+% Add algorithm-specific metrics
 metrics.num_iters = max_iters;
-metrics.final_power = final_power;
-metrics.snr = snr;
-metrics.min_snr = min_snr;
-metrics.rate = rate;
-metrics.feasible = feasible;
 
-if ~feasible
-    metrics.status_message = [metrics.status_message, ' (WARNING: SNR constraints not fully satisfied)'];
+% Add algorithm-specific status message if infeasible
+if ~metrics.feasible
+    metrics.status_message = 'WARNING: QoS constraints not satisfied at actual power';
 end
 
 end

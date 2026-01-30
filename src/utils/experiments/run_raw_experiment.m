@@ -184,6 +184,12 @@ for s = 1:num_scenarios
                     if isfield(metrics, 'cvx_optval_db')
                         results.raw.(scenario_field).methods.BOUND.power_db{k_idx}(trial) = metrics.cvx_optval_db;
                     end
+                    if isfield(metrics, 'cvx_min_snr')
+                        results.raw.(scenario_field).methods.BOUND.min_snr{k_idx}(trial) = metrics.cvx_min_snr;
+                    end
+                    if isfield(metrics, 'cvx_min_snr_db')
+                        results.raw.(scenario_field).methods.BOUND.min_snr_db{k_idx}(trial) = metrics.cvx_min_snr_db;
+                    end
 
                 catch ME
                     results.raw.(scenario_field).methods.(method_field).status{k_idx}{trial} = ME.message;

@@ -145,10 +145,7 @@ if ~strcmp(cvx_status, 'Solved') && ~strcmp(cvx_status, 'Inaccurate/Solved')
 end
 
 X_opt = X;
-metrics.cvx_optval = cvx_optval;
 
-%Bound to dB
-metrics.cvx_optval_db = 10*log10(cvx_optval);
 
 
 %% Gaussian randomization to extract rank-1 beamformer
@@ -222,30 +219,39 @@ end
 W = W_best;
 
 %% Compute final metrics using the chosen W
-snr = zeros(num_users, 1);
-for k = 1:num_users
-    snr(k) = abs(H(:, k)' * W_best)^2 / noise_power(k);
-end
-min_snr = min(snr);
-rate = sum(log2(1 + snr));
+% Use centralized metrics computation for consistency
+metrics = compute_beamformer_metrics(W, H, config);
 
-% Check feasibility: all SNR(k) >= gamma within tolerance
-tolerance = 1e-6;
-feasible = all(snr >= gamma * (1 - tolerance));
-
-% Update metrics
-metrics.power_db = 10*log10(best_power);
-metrics.snr_db = 10*log10(snr);
-metrics.min_snr_db = 10*log10(min_snr);
-metrics.final_power = best_power;
-metrics.snr = snr;
-metrics.min_snr = min_snr;
-metrics.rate = rate;
-metrics.feasible = feasible;
+% Add SDR-specific metrics
+metrics.cvx_optval = cvx_optval;
+metrics.cvx_optval_db = 10*log10(cvx_optval);
+metrics.num_randomizations = num_randomizations;
 metrics.converged = true;
 
-if ~feasible
-    metrics.status_message = [metrics.status_message, ' (WARNING: SNR constraints not fully satisfied)'];
+
+%{
+  Need SDR bound normalization if P_tr is provided in config for cvx optval
+  because cvx_optval corresponds to the minimum power at which the QoS
+%}
+
+% Normalize SNR if P_tr is provided
+if isfield(config, 'P_tr') && ~isempty(config.P_tr) && config.P_tr > 0
+    % Scale the SDR bound: cvx_optval represents minimum power
+    % If we normalize to P_tr, the bound scales proportionally
+    X_opt_normalized = X_opt * sqrt(config.P_tr / cvx_optval );
+    SNR_cvx = zeros(num_users, 1);
+    for k = 1:num_users
+        % Compute SNR with normalized power
+        SNR_cvx(k) = trace(Q{k} * X_opt_normalized) / noise_power(k);
+    end
+    min_SNR_cvx = min(SNR_cvx);
+    metrics.cvx_min_snr = min_SNR_cvx;
+    metrics.cvx_min_snr_db = 10*log10(metrics.cvx_min_snr);
+end
+
+% Add algorithm-specific status message
+if ~metrics.feasible
+    metrics.status_message = 'WARNING: QoS constraints not satisfied at actual power (SDR + randomization)';
 end
 
 end

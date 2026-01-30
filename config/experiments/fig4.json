@@ -1,12 +1,15 @@
 {
   "experiment_name": "fig4",
-  "description": "Fig. 4 power vs K (N=6) with shared trials for Fig. 5 (N=4)",
+  "description": "Figure 4 from paper: Required transmit power vs. number of users K (N=6, 1000 trials)",
   "seed": 42,
-  "num_trials": 200,
-  "k_list": [2, 4, 6, 8, 10, 12],
+  "P_tr": 1.0,
+  "num_trials": 1000,
+  "k_list": [2, 3, 4, 5, 6, 7, 8],
   "scenarios": [
-    { "name": "fig4_n6", "num_antennas": 6 },
-    { "name": "fig5_n4", "num_antennas": 4 }
+    {
+      "name": "n6",
+      "num_antennas": 6
+    }
   ],
   "num_streams": 1,
   "noise_power": 1.0,
@@ -17,9 +20,30 @@
   },
   "algorithms": [
     {
+      "name": "ff_c2",
+      "params": {}
+    },
+    {
+      "name": "rc_c2",
+      "params": {}
+    },
+    {
+      "name": "sbfc",
+      "params": {}
+    },
+    {
+      "name": "rc_c2_it_update",
+      "params": {
+        "max_iterations": 100,
+        "tolerance": 1e-6,
+        "alpha_max": 0.2,
+        "alpha_decay": 0.5
+      }
+    },
+    {
       "name": "sdr_beamformer",
       "params": {
-        "num_randomizations": 200,
+        "num_randomizations": 100,
         "cvx_quiet": true
       }
     }
