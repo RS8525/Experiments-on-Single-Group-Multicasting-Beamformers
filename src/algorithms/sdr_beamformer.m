@@ -244,6 +244,7 @@ if isfield(config, 'P_tr') && ~isempty(config.P_tr) && config.P_tr > 0
         % Compute SNR with normalized power
         SNR_cvx(k) = trace(Q{k} * X_opt_normalized) / noise_power(k);
     end
+    SNR_cvx = real(SNR_cvx);
     min_SNR_cvx = min(SNR_cvx);
     metrics.cvx_min_snr = min_SNR_cvx;
     metrics.cvx_min_snr_db = 10*log10(metrics.cvx_min_snr);

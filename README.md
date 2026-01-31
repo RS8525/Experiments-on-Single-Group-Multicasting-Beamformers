@@ -139,8 +139,8 @@ For fair algorithm comparison, SNR metrics can be normalized to a reference powe
 - **SDR** (`sdr_beamformer`): Semi-definite relaxation with randomization
 
 ### Baselines
-- **Zero-Forcing**: Zero-forcing beamformer (to be implemented)
-- **MRT**: Maximum ratio transmission (to be implemented)
+- **Zero-Forcing** (`zf_beamformer`): Zero-forcing beamformer using pseudo-inverse (closed-form)
+- **SQP** (`sqp_beamformer`): Sequential Quadratic Programming via fmincon (requires Optimization Toolbox)
 
 ## Design Principles
 

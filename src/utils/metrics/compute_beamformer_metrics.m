@@ -70,7 +70,11 @@ end
 W = W(:);  % Ensure column vector
 P_actual = norm(W)^2;
 metrics.final_power = P_actual;
-metrics.power_db = 10*log10(P_actual);
+
+% Compute power in dB normalized by average noise power (common in papers)
+% This gives "power relative to noise floor" which is more meaningful
+avg_noise_power = mean(sigma_k_squared);
+metrics.power_db = 10*log10(P_actual / avg_noise_power);
 
 %% Determine beamformer for SNR computation
 if isfield(config, 'P_tr') && ~isempty(config.P_tr) && config.P_tr > 0

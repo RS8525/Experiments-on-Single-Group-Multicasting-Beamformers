@@ -24,6 +24,10 @@ switch name
         fn_name = 'sbfc';
     case 'rc_c2_it_update'
         fn_name = 'rc_c2_it_update';
+    case 'zf_beamformer'
+        fn_name = 'zf_beamformer';
+    case 'sqp_beamformer'
+        fn_name = 'sqp_beamformer';
     otherwise
         error('Unknown algorithm: %s', name);
 end

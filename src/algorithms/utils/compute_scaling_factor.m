@@ -26,7 +26,7 @@ recv_power = max(recv_power, 1e-12);
 alpha_k = (gamma .* sigma_k_squared) ./ recv_power;  % [num_users x 1]
 
 % Take the maximum (worst-case user)
-alpha = max(alpha_k);
+alpha = sqrt(max(alpha_k));
 
 %{
  % If alpha < 1, no scaling is needed

@@ -135,9 +135,13 @@ for s = 1:num_scenarios
                 if isfield(algo_params, 'seed')
                     algo_params = rmfield(algo_params, 'seed');
                 end
+                if isfield(config, 'P_tr')
+                    algo_params.P_tr = config.P_tr;
+                end
 
                 algo_params.gamma = gamma;
                 algo_params.noise_power = noise_k;
+                
 
                 try
                     [W, metrics] = algo_fns{alg_idx}(H, algo_params);
