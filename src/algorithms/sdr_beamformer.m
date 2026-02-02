@@ -238,7 +238,7 @@ metrics.converged = true;
 if isfield(config, 'P_tr') && ~isempty(config.P_tr) && config.P_tr > 0
     % Scale the SDR bound: cvx_optval represents minimum power
     % If we normalize to P_tr, the bound scales proportionally
-    X_opt_normalized = X_opt * sqrt(config.P_tr / cvx_optval );
+    X_opt_normalized = X_opt * config.P_tr / cvx_optval;
     SNR_cvx = zeros(num_users, 1);
     for k = 1:num_users
         % Compute SNR with normalized power

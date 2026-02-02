@@ -13,7 +13,7 @@
   ],
   "num_streams": 1,
   "noise_power": 1.0,
-  "gamma_db": 0,
+  "gamma_db": 10,
   "channel": {
     "type": "iid_rayleigh",
     "normalize": false

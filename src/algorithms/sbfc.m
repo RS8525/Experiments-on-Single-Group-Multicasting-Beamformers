@@ -61,7 +61,7 @@ h_orth = H;
 [~, l1] = min((vecnorm(h_orth).^2)' ./ c);
 
 % Step 3: Set initial filter
-w = h_orth(:, l1) / norm(h_orth(:, l1), 2);
+w = h_orth(:, l1) / norm(h_orth(:, l1), 2)^2 * sqrt(c(l1));
 
 % Step 4: Initialize active user set
 U = setdiff(1:num_users, l1);
@@ -94,7 +94,10 @@ for iter = 2:num_antennas
     h_orth(:, U) = h_orth(:, U) - h_orth(:, l_prev) * proj_coeffs;
     
     % Step 9: Update beamformer
-    alpha_iter = exp(-angle(w' * H(:, l_iter)) * 1i) * (sqrt(abs(w' * H(:, l_iter))^2 - c(l_iter)*snr_gamma_iter(l_iter)) - abs(w' * H(:, l_iter))) / vecnorm(h_orth(:, l_iter), 2);
+    alpha_iter_angle = exp(-angle(w' * H(:, l_iter)) * 1i);
+    alpha_iter_abs = (sqrt(c(l_iter) ) - abs(w' * H(:, l_iter))) / vecnorm(h_orth(:, l_iter), 2)^2;
+    %Warning sigma_k_squared used in the formula under the square root but in the paper it is sigma_\mu_squared
+    alpha_iter = alpha_iter_angle * alpha_iter_abs;
     w = w + alpha_iter * h_orth(:, l_iter);
     
     % Step 10: Update active set
