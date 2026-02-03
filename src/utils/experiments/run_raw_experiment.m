@@ -92,6 +92,7 @@ for s = 1:num_scenarios
     if has_sdr
         results.raw.(scenario_field).methods.BOUND = struct();
         results.raw.(scenario_field).methods.BOUND.cvx_optval = cell(1, num_k);
+        results.raw.(scenario_field).methods.BOUND.rank = cell(1, num_k);
     end
 
     for k_idx = 1:num_k
@@ -115,6 +116,7 @@ for s = 1:num_scenarios
         if has_sdr
             results.raw.(scenario_field).methods.BOUND.power_db{k_idx} = nan(1, num_trials);
             results.raw.(scenario_field).methods.BOUND.power{k_idx} = nan(1, num_trials);
+            results.raw.(scenario_field).methods.BOUND.rank{k_idx} = nan(1, num_trials);
         end
 
         logf('Scenario %s (N=%d), K=%d', scenario_name, num_antennas, num_users);
@@ -179,6 +181,8 @@ for s = 1:num_scenarios
                     else
                         results.raw.(scenario_field).methods.(method_field).status{k_idx}{trial} = '';
                     end
+
+                    % [BOUND] generation if sdr_beamformer is present
                     if isfield(metrics, 'cvx_optval')
                         results.raw.(scenario_field).methods.BOUND.power{k_idx}(trial) = metrics.cvx_optval;
                         if has_sdr && strcmpi(algo_names{alg_idx}, 'sdr_beamformer')
@@ -193,6 +197,13 @@ for s = 1:num_scenarios
                     end
                     if isfield(metrics, 'cvx_min_snr_db')
                         results.raw.(scenario_field).methods.BOUND.min_snr_db{k_idx}(trial) = metrics.cvx_min_snr_db;
+                    end
+                    if isfield(metrics, 'cvx_rank')
+                        results.raw.(scenario_field).methods.BOUND.rank{k_idx}(trial) = metrics.cvx_rank;
+                    end
+                    % Store SQP metrics if present
+                    if isfield(metrics, 'exitflag')
+                        results.raw.(scenario_field).methods.(method_field).exitflag{k_idx}(trial) = metrics.exitflag;
                     end
 
                 catch ME

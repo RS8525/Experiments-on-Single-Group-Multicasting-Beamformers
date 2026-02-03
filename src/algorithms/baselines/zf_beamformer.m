@@ -37,7 +37,6 @@ function [W, metrics] = zf_beamformer(H, config)
 %   ZF requires num_antennas >= num_users for full rank
 
 %% Configuration and parameter extraction
-tic;  % Start timer
 
 [num_antennas, num_users] = size(H);
 
@@ -68,9 +67,22 @@ assert(length(sigma_k_squared) == num_users, ...
 
 % Check rank condition
 if num_antennas < num_users
-    warning('zf_beamformer:underdetermined', ...
-        'ZF requires num_antennas >= num_users. System is underdetermined (%d < %d)', ...
-        num_antennas, num_users);
+    % Return empty solution with NaN metrics
+    W = zeros(num_antennas, 1);
+    metrics = struct();
+    metrics.final_power = NaN;
+    metrics.snr = NaN(num_users, 1);
+    metrics.min_snr = NaN;
+    metrics.snr_db = NaN(num_users, 1);
+    metrics.min_snr_db = NaN;
+    metrics.power_db = NaN;
+    metrics.rate = NaN;
+    metrics.feasible = false;
+    metrics.converged = false;
+    metrics.solve_time = 0;
+    metrics.cond_number = NaN;
+    metrics.status_message = sprintf('ZF failed: underdetermined system (M=%d < K=%d)', num_antennas, num_users);
+    return;
 end
 
 % Compute Gram matrix
@@ -108,21 +120,16 @@ recv_power_unit = abs(H' * w_zf).^2;  % [num_users x 1]
 % alpha^2 * recv_power_unit(k) >= gamma_k * sigma_k^2
 % alpha^2 >= gamma_k * sigma_k^2 / recv_power_unit(k)
 
-required_power_per_user = gamma .* sigma_k_squared ./ max(recv_power_unit, eps);
-alpha_squared = max(required_power_per_user);
-alpha = sqrt(alpha_squared);
+alpha = compute_scaling_factor(w_zf, H, gamma, sigma_k_squared);
 
 % Final beamformer
 W = alpha * w_zf;
 
-solve_time = toc;
 
 %% Compute metrics using centralized function
 metrics = compute_beamformer_metrics(W, H, config);
 
 % Add algorithm-specific fields
-metrics.converged = true;  % ZF is closed-form, always "converges"
-metrics.solve_time = solve_time;
 metrics.cond_number = cond_G;
 
 % Add status message

@@ -80,29 +80,12 @@ else
     display_mode = 'off';
 end
 
-% Set random seed for initialization if provided
-if isfield(config, 'seed')
-    if exist('set_global_seed', 'file')
-        set_global_seed(config.seed);
-    else
-        rng(config.seed, 'twister');
-    end
-end
 
 %% Initial guess
 
-% Use MRT (Maximum Ratio Transmission) direction as initialization
-% MRT: w = sum(h_k) / ||sum(h_k)||
-h_sum = sum(H, 2);  % Sum across all user channels
-w0 = h_sum / norm(h_sum);
+% Use RC-C2 as initialization
+w0 = rc_c2(H, config);
 
-% Scale to roughly satisfy average QoS (rough initialization)
-avg_gamma = mean(gamma);
-avg_noise = mean(sigma_k_squared);
-recv_power_init = abs(H' * w0).^2;
-avg_recv_power = mean(recv_power_init);
-scale_init = sqrt(avg_gamma * avg_noise / max(avg_recv_power, eps));
-w0 = w0 * scale_init;
 
 % Convert to real representation for fmincon
 % w = w_real + 1j*w_imag -> x = [w_real; w_imag]
@@ -110,8 +93,8 @@ x0 = [real(w0); imag(w0)];  % [2*num_antennas x 1]
 
 %% Define optimization problem
 
-% Objective function: minimize ||w||^2
-objective = @(x) norm(x)^2;
+% Objective function: minimize ||w||^2 with gradient
+objective = @(x) sqp_objective(x);
 
 % Nonlinear constraints: |h_k' * w|^2 >= gamma_k * sigma_k^2
 % In fmincon format: c(x) <= 0, so we use:
@@ -154,17 +137,13 @@ W = w_real + 1j * w_imag;
 %% Compute metrics
 metrics = compute_beamformer_metrics(W, H, config);
 
-% Add SQP-specific fields
-metrics.solve_time = solve_time;
-metrics.iterations = output.iterations;
-metrics.exitflag = exitflag;
-metrics.fval = fval;
+
 
 % Determine convergence status based on exitflag
 % exitflag > 0: converged successfully
 % exitflag = 0: max iterations reached
 % exitflag < 0: failed
-metrics.converged = (exitflag > 0);
+
 
 % Status message based on exitflag
 if exitflag > 0
@@ -175,23 +154,51 @@ if exitflag > 0
     end
 elseif exitflag == 0
     metrics.status_message = sprintf('SQP: max iterations reached (%d)', max_iter);
-elseif exitflag == -2
-    metrics.status_message = 'SQP: no feasible point found';
+elseif exitflag < 0
+    metrics = compute_beamformer_metrics(w0, H, config);
+    W = w0;
+    metrics.status_message = 'SQP: failed falling back to rc_c2 initialization';
 else
     metrics.status_message = sprintf('SQP failed (exitflag=%d)', exitflag);
 end
 
+% Add SQP-specific fields
+metrics.converged = (exitflag > 0);
+metrics.solve_time = solve_time;
+metrics.iterations = output.iterations;
+metrics.exitflag = exitflag;
+metrics.fval = fval;
+
+end
+
+%% Helper function: Objective with gradient
+function [f, g] = sqp_objective(x)
+% SQP_OBJECTIVE Objective function for SQP: minimize ||w||^2
+%
+% Inputs:
+%   x - [2*M x 1] real representation [w_real; w_imag]
+%
+% Outputs:
+%   f - objective value ||w||^2
+%   g - gradient [2*M x 1]
+
+% Objective: f = ||w||^2 = w_real'*w_real + w_imag'*w_imag
+f = norm(x)^2;
+
+% Gradient: df/dx = 2*x
+g = 2 * x;
+
 end
 
 %% Helper function: Nonlinear constraints with gradients
-function [c, ceq, gc, gceq] = sqp_constraints(x, H, gamma, sigma_k_squared)
+function [c, ceq, gc, gceq] = sqp_constraints(x, H, gamma, sigma2)
 % SQP_CONSTRAINTS Nonlinear constraints for SQP beamformer
 %
 % Inputs:
 %   x              - [2*M x 1] real representation [w_real; w_imag]
 %   H              - [M x K] channel matrix
 %   gamma          - [K x 1] QoS targets
-%   sigma_k_squared- [K x 1] noise powers
+%   sigma2         - [K x 1] noise powers
 %
 % Outputs:
 %   c   - [K x 1] inequality constraints (c <= 0)
@@ -201,38 +208,23 @@ function [c, ceq, gc, gceq] = sqp_constraints(x, H, gamma, sigma_k_squared)
 
 [num_antennas, num_users] = size(H);
 
-% Extract real and imaginary parts
-w_real = x(1:num_antennas);
-w_imag = x(num_antennas+1:end);
-w = w_real + 1j * w_imag;
+w = x(1:num_antennas) + 1j*x(num_antennas+1:end);
 
-% Compute constraints: c_k = gamma_k * sigma_k^2 - |h_k' * w|^2 <= 0
-% We want |h_k' * w|^2 >= gamma_k * sigma_k^2
-c = zeros(num_users, 1);
-gc = zeros(2*num_antennas, num_users);
+s = H' * w;                 % Kx1, s_k = h_k^H w
+recv = abs(s).^2;           % Kx1
 
-for k = 1:num_users
-    h_k = H(:, k);
-    
-    % Constraint value
-    recv_power = abs(h_k' * w)^2;
-    c(k) = gamma(k) * sigma_k_squared(k) - recv_power;
-    
-    % Gradient computation
-    % d/dw_real |h' * w|^2 = 2 * real(h .* conj(h' * w))
-    % d/dw_imag |h' * w|^2 = 2 * imag(h .* conj(h' * w))
-    
-    h_w = h_k' * w;
-    grad_real = 2 * real(h_k * conj(h_w));
-    grad_imag = 2 * imag(h_k * conj(h_w));
-    
-    % Since c_k = ... - |h_k' * w|^2, gradient has negative sign
-    gc(1:num_antennas, k) = -grad_real;
-    gc(num_antennas+1:end, k) = -grad_imag;
-end
-
-% No equality constraints
+c   = gamma(:).*sigma2(:) - recv;
 ceq = [];
+
+% Gradient of recv_k = |s_k|^2 wrt [Re(w); Im(w)] is:
+% 2*[Re(h_k*s_k); Im(h_k*s_k)]
+G = 2 * H .* (s.' );        % MxK, column k is 2*h_k*s_k   (NOTE: no conj)
+
+gc = -[real(G); imag(G)];   % (2M)xK because c = ... - recv
 gceq = [];
+
+% Defensive: ensure real outputs
+c  = real(c);
+gc = real(gc);
 
 end

@@ -1,6 +1,8 @@
 function plotting_processed(processed_path, stat_name, metric_name, varargin)
 % PLOTTING_PROCESSED Plot processed metrics vs K for multiple methods.
 %
+% Automatically saves figures to results/figures/{experiment_name}/
+%
 % Inputs:
 %   processed_path - Path to processed_results.mat
 %   stat_name      - 'mean', 'median', 'p25', 'p75', 'min', or 'max'
@@ -9,7 +11,7 @@ function plotting_processed(processed_path, stat_name, metric_name, varargin)
 % Name-value options:
 %   'Scenario' - Scenario name or field (optional)
 %   'Methods'  - Cell array of method names to plot (optional)
-%   'SavePath' - Output file path for figure (optional)
+%   'SavePath' - Output file path for figure (optional, overrides auto-save)
 %   'Title'    - Custom title (optional)
 
 if nargin < 3
@@ -22,6 +24,15 @@ if ~isfield(loaded, 'processed')
 end
 
 processed = loaded.processed;
+
+% Extract experiment name from metadata
+if isfield(processed, 'meta') && isfield(processed.meta, 'experiment_name')
+    experiment_name = processed.meta.experiment_name;
+else
+    % Fallback: try to extract from path
+    [~, exp_folder] = fileparts(fileparts(processed_path));
+    experiment_name = exp_folder;
+end
 
 parser = inputParser;
 addParameter(parser, 'Scenario', '', @(x) ischar(x) || isstring(x));
@@ -96,6 +107,25 @@ title(title_text);
 
 if ~isempty(legend_entries)
     legend(legend_entries, 'Location', 'best');
+end
+
+% Auto-save to results/figures/{experiment_name}/ if SavePath not provided
+if isempty(save_path)
+    % Determine project root (go up from plotting/ directory)
+    script_dir = fileparts(mfilename('fullpath'));
+    project_root = fileparts(script_dir);
+    
+    % Create output directory
+    output_dir = fullfile(project_root, 'results', 'figures', experiment_name);
+    if ~exist(output_dir, 'dir')
+        mkdir(output_dir);
+    end
+    
+    % Generate filename: {stat_name}_{metric_name}.png
+    filename = sprintf('%s_%s.png', stat_name, metric_name);
+    save_path = fullfile(output_dir, filename);
+    
+    fprintf('Saving figure to: %s\n', save_path);
 end
 
 if ~isempty(save_path)

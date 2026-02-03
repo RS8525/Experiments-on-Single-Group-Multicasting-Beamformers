@@ -225,6 +225,7 @@ metrics = compute_beamformer_metrics(W, H, config);
 % Add SDR-specific metrics
 metrics.cvx_optval = cvx_optval;
 metrics.cvx_optval_db = 10*log10(cvx_optval);
+metrics.cvx_rank = rank(X_opt, 1e-6);  % Rank of optimal SDR solution
 metrics.num_randomizations = num_randomizations;
 metrics.converged = true;
 

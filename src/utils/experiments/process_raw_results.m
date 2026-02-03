@@ -91,6 +91,28 @@ for s = 1:numel(scenario_fields)
             if isfield(method, 'min_snr_db') && ~isempty(method.min_snr_db)
                 metrics.min_snr_db = assign_stats(metrics.min_snr_db, k_idx, method.min_snr_db{k_idx});
             end
+            if isfield(method, 'exitflag') && ~isempty(method.exitflag)
+                metrics.exitflag = init_stats(num_k);
+                metrics.exitflag = assign_stats(metrics.exitflag, k_idx, method.exitflag{k_idx});
+            end
+            if isfield(method, 'rank') && ~isempty(method.rank)
+                if ~isfield(metrics, 'rank_frequency')
+                    metrics.rank_frequency = cell(1, num_k);
+                end
+                % Compute frequency distribution for rank values
+                rank_values = method.rank{k_idx};
+                rank_values = rank_values(~isnan(rank_values)); % Remove NaN
+                if ~isempty(rank_values)
+                    unique_ranks = unique(rank_values);
+                    frequencies = zeros(size(unique_ranks));
+                    for r = 1:length(unique_ranks)
+                        frequencies(r) = sum(rank_values == unique_ranks(r)) / length(rank_values);
+                    end
+                    metrics.rank_frequency{k_idx} = struct('ranks', unique_ranks, 'frequencies', frequencies);
+                else
+                    metrics.rank_frequency{k_idx} = struct('ranks', [], 'frequencies', []);
+                end
+            end
         end
 
         processed.scenarios.(scenario_field).methods.(method_field).metrics = metrics;

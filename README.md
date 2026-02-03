@@ -64,33 +64,24 @@ Implementation and comparison of multicast beamforming algorithms from the paper
    
    This computes mean, median, percentiles (p25, p75), min, and max for all metrics.
 
-4. **Generate plots**:
+4. **Generate plots**: Figures are automatically saved to `results/figures/{experiment_name}/`
    
-   **Option A - Quick plotting (single method/scenario)**:
    ```matlab
-   cd plotting
-   plot_example_results  % Interactive - automatically finds your results
+   % Plot mean power vs K - auto-saves to results/figures/fig4/mean_power_db.png
+   plotting_processed('results/processed/fig4/processed_results.mat', 'mean', 'power_db')
+   
+   % Plot mean minimum SNR vs K - auto-saves to results/figures/fig4/mean_min_snr_db.png
+   plotting_processed('results/processed/fig4/processed_results.mat', 'mean', 'min_snr_db')
+   
+   % Plot feasibility rate - auto-saves to results/figures/fig4/mean_feasible.png
+   plotting_processed('results/processed/fig4/processed_results.mat', 'mean', 'feasible')
    ```
    
-   **Option B - Multi-method comparison plots**:
+   **Optional**: Override auto-save with custom path
    ```matlab
-   % Plot mean power vs K for all methods
-   plotting_processed('results/processed/fig4/processed_results.mat', ...
-                      'mean', 'power', ...
-                      'SavePath', 'results/figures/power_comparison.png')
-   
-   % Plot mean minimum SNR vs K
-   plotting_processed('results/processed/fig4/processed_results.mat', ...
-                      'mean', 'min_snr', ...
-                      'SavePath', 'results/figures/min_snr_comparison.png')
-   
-   % Plot feasibility rate
-   plotting_processed('results/processed/fig4/processed_results.mat', ...
-                      'mean', 'feasible', ...
-                      'SavePath', 'results/figures/feasibility_comparison.png')
+   plotting_processed('results/processed/fig4/processed_results.mat', 'mean', 'power_db', ...
+                      'SavePath', 'custom/path/my_figure.png')
    ```
-   
-   Figures are saved to `results/figures/`
 
 ### Available Metrics for Plotting
 
