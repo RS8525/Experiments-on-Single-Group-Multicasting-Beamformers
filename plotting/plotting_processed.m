@@ -167,9 +167,9 @@ function label = metric_label(metric_name)
         case 'solve_time'
             label = 'Solve Time (s)';
         case 'power_db'
-            label = metric_name;
+            label = 'Transmit Power (dB)';
         case 'min_snr_db'
-            label = metric_name;
+            label = 'Min SNR (dB)';
         otherwise
     end
 end
@@ -198,6 +198,10 @@ function name = format_method_name(method_field)
         name = '[SBFC]';
     elseif strcmpi(method_field, 'rc_c2_it_update')
         name = '[RC-C2 + it. Update]';
+    elseif strcmpi(method_field, 'sqp_beamformer')
+        name = '[SQP]';
+    elseif strcmpi(method_field, 'zf_beamformer')
+        name = '[ZF]';
     else
         name = method_field;
     end

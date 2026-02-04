@@ -92,8 +92,22 @@ for s = 1:numel(scenario_fields)
                 metrics.min_snr_db = assign_stats(metrics.min_snr_db, k_idx, method.min_snr_db{k_idx});
             end
             if isfield(method, 'exitflag') && ~isempty(method.exitflag)
-                metrics.exitflag = init_stats(num_k);
-                metrics.exitflag = assign_stats(metrics.exitflag, k_idx, method.exitflag{k_idx});
+                if ~isfield(metrics, 'exitflag_frequency')
+                    metrics.exitflag_frequency = cell(1, num_k);
+                end
+                % Compute frequency distribution for exitflag values
+                exitflag_values = method.exitflag{k_idx};
+                exitflag_values = exitflag_values(~isnan(exitflag_values)); % Remove NaN
+                if ~isempty(exitflag_values)
+                    unique_flags = unique(exitflag_values);
+                    frequencies = zeros(size(unique_flags));
+                    for f = 1:length(unique_flags)
+                        frequencies(f) = sum(exitflag_values == unique_flags(f)) / length(exitflag_values);
+                    end
+                    metrics.exitflag_frequency{k_idx} = struct('flags', unique_flags, 'frequencies', frequencies);
+                else
+                    metrics.exitflag_frequency{k_idx} = struct('flags', [], 'frequencies', []);
+                end
             end
             if isfield(method, 'rank') && ~isempty(method.rank)
                 if ~isfield(metrics, 'rank_frequency')
